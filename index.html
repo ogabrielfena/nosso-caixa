@@ -443,8 +443,8 @@ details.itens summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--
   <main class="page" id="page"></main>
 </div>
 <div class="scrim" id="scrim" hidden></div>
-<aside class="drawer" id="drawer" aria-label="Copiloto">
-  <div class="drawer-h"><span class="ai-dot"><span></span></span><b>Copiloto do casal</b><button class="btn btn-sm btn-ghost" id="closeDrawer" type="button" aria-label="Fechar"><i data-lucide="x"></i></button></div>
+<aside class="drawer" id="drawer" aria-label="Zé">
+  <div class="drawer-h"><span class="ai-dot"><span></span></span><b>Zé</b><button class="btn btn-sm btn-ghost" id="closeDrawer" type="button" aria-label="Fechar"><i data-lucide="x"></i></button></div>
   <div class="chat" id="chat"></div>
   <form class="chat-f" id="chatForm"><input id="chatIn" placeholder="Ex.: dá pra jantar fora sábado?" autocomplete="off"><button class="btn btn-primary" type="submit">Enviar</button></form>
 </aside>
@@ -828,7 +828,7 @@ function resumoDiario(c) {
   const lim = c.limiteDia, prox = proximasContas(c, 3).filter((x) => !x.pago)
   const ontemTxt = `${SEM[c.ontem.getDay()]} ${c.ontem.getDate()}/${String(c.ontem.getMonth() + 1).padStart(2, '0')}`
   const top = g.slice().sort((a, b) => b.valor - a.valor).slice(0, 3).map((x) => `• ${x.desc || (CATS[x.cat] || CATS.outros)[0]} ${brl(+x.valor)} (${PESSOAS[x.quem]})`).join('\n')
-  return `Bom dia, Gabriel e Tainara ☀️\n\n*Ontem (${ontemTxt})* vocês gastaram *${brl(tot)}* de ${brl(lim)} do limite.${top ? '\n' + top : ''}\n\n*Hoje* dá para gastar *${brl(Math.max(0, lim + c.sobraAcumulada))}*${c.sobraAcumulada >= 0 ? ` (${brl(c.sobraAcumulada)} sobraram dos outros dias)` : ` (o mês está ${brl(-c.sobraAcumulada)} acima)`}.${prox.length ? `\n\n*Contas chegando*\n${prox.map((x) => `• ${x.nome} ${brl(+x.valor, false)} – ${x.em === 0 ? 'hoje' : x.em === 1 ? 'amanhã' : `dia ${x.quando.getDate()}`}`).join('\n')}` : ''}\n\n*Meta do mês:* ${brl(c.aportadoMes, false)} de ${brl(c.meta, false)} investidos. Previsão de sobra: ${brl(c.economiaProj, false)}.`
+  return `${c.sobraAcumulada < 0 ? 'Bom dia, gastões. Porra, ontem passou do limite de novo.' : 'Bom dia, casal. Zé na área e, milagre, vocês se comportaram ontem.'}\n\n*Ontem (${ontemTxt})* vocês gastaram *${brl(tot)}* de ${brl(lim)} do limite.${top ? '\n' + top : ''}\n\n*Hoje* dá para gastar *${brl(Math.max(0, lim + c.sobraAcumulada))}*${c.sobraAcumulada >= 0 ? ` (${brl(c.sobraAcumulada)} sobraram dos outros dias)` : ` (o mês está ${brl(-c.sobraAcumulada)} acima)`}.${prox.length ? `\n\n*Contas chegando*\n${prox.map((x) => `• ${x.nome} ${brl(+x.valor, false)} – ${x.em === 0 ? 'hoje' : x.em === 1 ? 'amanhã' : `dia ${x.quando.getDate()}`}`).join('\n')}` : ''}\n\n*Meta do mês:* ${brl(c.aportadoMes, false)} de ${brl(c.meta, false)} investidos. Previsão de sobra: ${brl(c.economiaProj, false)}.`
 }
 function vAssistente(c) {
   const num = (S.cfg.whatsapp || '').trim()
@@ -845,10 +845,10 @@ function vAssistente(c) {
     </div></section>
   <div class="grid g2">
     <section class="card"><div class="card-h"><h3>Prévia do resumo de amanhã</h3><small>enviado às ${esc(S.cfg.horaResumo)} no grupo</small></div>
-      <div class="card-b"><div class="wa"><div class="bubble"><span class="from">Assistente Nosso Caixa</span>${esc(resumoDiario(c)).replace(/\*(.+?)\*/g, '<b>$1</b>')}<span class="t">${esc(S.cfg.horaResumo)}</span></div>
+      <div class="card-b"><div class="wa"><div class="bubble"><span class="from">Zé</span>${esc(resumoDiario(c)).replace(/\*(.+?)\*/g, '<b>$1</b>')}<span class="t">${esc(S.cfg.horaResumo)}</span></div>
       <div class="bubble me">uber 32 porto<span class="t">08:41</span></div>
-      <div class="bubble"><span class="from">Assistente Nosso Caixa</span>Lancei Uber R$ 32,00 (Gabriel, Porto). Ainda dá para gastar ${brl(Math.max(0, c.podeHoje - 32))} hoje.<span class="t">08:41</span></div></div></div></section>
-    <section class="card"><div class="card-h"><h3>O que ele manda sozinho</h3></div>
+      <div class="bubble"><span class="from">Zé</span>Lancei o Uber, R$ 32,00 no cartão. Ainda dá ${brl(Math.max(0, c.podeHoje - 32))} hoje, não inventa moda.<span class="t">08:41</span></div></div></div></section>
+    <section class="card"><div class="card-h"><h3>O que o Zé manda sozinho</h3></div>
       <div class="card-b"><div class="list sched">
         ${[['Todo dia', S.cfg.horaResumo, 'Resumo de ontem, limite de hoje e contas chegando'], ['Véspera', '09:00', 'Lembrete de cada conta fixa um dia antes do vencimento'], ['Dia do salário', '09:00', `Dízimo de ${brl(c.dizimo, false)} (${dizimoRegra()})`], ['Dia do salário', '10:00', `Lembrete de investir ${brl(S.cfg.metaMensal, false)} e a divisão por meta`], ['Ao passar', 'na hora', 'Aviso quando o gasto do dia passar do limite acumulado'], ['Domingo', '19:00', 'Progresso da semana e das metas (Viagem, Carro, Casa)'], ['Dia 1º', '09:00', 'Fechamento do mês anterior: quanto sobrou e quanto foi investido']].map(([q, h, t]) => `<div class="li"><span class="tm">${h}</span><div class="main-t"><b style="white-space:normal">${t}</b><span>${q}</span></div></div>`).join('')}
       </div></div></section>
@@ -909,7 +909,7 @@ function waCard() {
   const st = WA.status, ligado = st === 'WORKING', grupo = S.cfg.grupoWhatsapp
   const fones = S.cfg.telefones || {}
   const pill = WA.erro ? '<span class="pill warn">servidor do WhatsApp não configurado</span>' : ligado ? '<span class="pill ok">conectado</span>' : st === 'SCAN_QR_CODE' ? '<span class="pill warn">esperando o QR code</span>' : st ? `<span class="pill">${esc(st.toLowerCase())}</span>` : '<span class="pill">verificando…</span>'
-  return `<section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="message-circle"></i></span>WhatsApp do assistente</h3>${pill}</div>
+  return `<section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="message-circle"></i></span>Zé no WhatsApp</h3>${pill}</div>
     <div class="card-b qr-box">
       <div class="qr" id="waQr">${WA.img ? `<img src="${WA.img}" alt="QR code para conectar o WhatsApp">` : ligado ? `<div class="empty" style="color:#2f8a2f">✓ conectado${grupo ? `<br>grupo: ${esc(S.cfg.grupoNome || '')}` : ''}</div>` : `<div class="empty">${WA.erro ? esc(WA.erro) : 'Clique em "Gerar QR code".'}</div>`}</div>
       <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
@@ -938,7 +938,7 @@ function waBind() {
   document.querySelectorAll('[data-wagrupo]').forEach((b) => b.addEventListener('click', async () => { try { await waCall('vincular', { grupoId: b.dataset.wagrupo, grupoNome: b.dataset.wanome }); toast('Grupo vinculado. O assistente mandou um oi lá.') } catch (e) { toast(e.message) } }))
   document.getElementById('fFones')?.addEventListener('submit', (e) => { e.preventDefault(); S.cfg.telefones = { gabriel: document.getElementById('foneG').value.replace(/\D/g, ''), tainara: document.getElementById('foneT').value.replace(/\D/g, '') }; saveCfg('Números salvos.') })
 }
-function vAjustesTudo(c) { return `<section class="card"><div class="card-b" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${ph(window.claudeUser?.pessoa?.() || 'gabriel', 'md')}<div class="main-t" style="flex:1"><b>Conectado como ${PESSOAS[window.claudeUser?.pessoa?.()] || ''}</b><div class="note">${esc(window.nossoCaixa?.email || '')}</div></div><form id="fSenha" style="display:flex;gap:8px;flex-wrap:wrap" onsubmit="return window.nossoCaixa.trocarSenha(event)"><input id="novaSenha" type="password" autocomplete="new-password" placeholder="nova senha" minlength="8" style="height:32px;border:1.5px solid var(--line);border-radius:99px;padding:0 12px;background:var(--surface)"><button class="btn btn-sm" type="submit">Trocar senha</button></form><button class="btn btn-sm" type="button" onclick="window.nossoCaixa.sair()"><i data-lucide="log-out"></i>Sair</button></div></section>` + vAjustes(c) + `<div class="page-h" style="margin:8px 4px 0"><h1 style="font-size:20px">Assistente no WhatsApp</h1></div>` + vAssistente(c) }
+function vAjustesTudo(c) { return `<section class="card"><div class="card-b" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${ph(window.claudeUser?.pessoa?.() || 'gabriel', 'md')}<div class="main-t" style="flex:1"><b>Conectado como ${PESSOAS[window.claudeUser?.pessoa?.()] || ''}</b><div class="note">${esc(window.nossoCaixa?.email || '')}</div></div><form id="fSenha" style="display:flex;gap:8px;flex-wrap:wrap" onsubmit="return window.nossoCaixa.trocarSenha(event)"><input id="novaSenha" type="password" autocomplete="new-password" placeholder="nova senha" minlength="8" style="height:32px;border:1.5px solid var(--line);border-radius:99px;padding:0 12px;background:var(--surface)"><button class="btn btn-sm" type="submit">Trocar senha</button></form><button class="btn btn-sm" type="button" onclick="window.nossoCaixa.sair()"><i data-lucide="log-out"></i>Sair</button></div></section>` + vAjustes(c) + `<div class="page-h" style="margin:8px 4px 0"><h1 style="font-size:20px">Zé, o assistente do grupo</h1></div>` + vAssistente(c) }
 function vAjustes(c) {
   return `
   <div class="grid g2e">
@@ -1503,7 +1503,7 @@ document.getElementById('closeDrawer').addEventListener('click', closeDrawer)
 scrim.addEventListener('click', closeDrawer)
 function chatIntro() {
   const sug = ['Dá pra jantar fora no sábado?', 'Quanto falta para a viagem?', 'Onde estamos gastando mais?']
-  chat.innerHTML = `<div class="msg">Pergunte sobre o mês, as metas ou se cabe um gasto. Eu respondo com os números desta página.</div><div class="sugs">${sug.map((s) => `<button class="chip-btn" type="button" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div>`
+  chat.innerHTML = `<div class="msg">Fala aí. Pergunta do mês, das metas ou se cabe um gasto. O Zé responde com os números, e sem passar a mão na cabeça.</div><div class="sugs">${sug.map((s) => `<button class="chip-btn" type="button" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div>`
   chat.querySelectorAll('[data-sug]').forEach((b) => b.addEventListener('click', () => ask(b.dataset.sug)))
 }
 document.getElementById('chatForm').addEventListener('submit', (e) => { e.preventDefault(); const v = document.getElementById('chatIn').value.trim(); if (v) ask(v) })
