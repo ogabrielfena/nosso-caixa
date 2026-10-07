@@ -377,6 +377,7 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .mon b{font:600 15px var(--font-display)}
 .mon span{font-size:11px}
 .ev.dizimo{background:#f3e8ff;color:#6b21a8}
+.ev.google{background:#e3f0ff;color:#174ea6;border-left:3px solid #4285f4}
 :root[data-theme="dark"] .ev.dizimo{background:#2a1840;color:#d8b4fe}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ev.dizimo{background:#2a1840;color:#d8b4fe}}
 @media (max-width:720px){.months{grid-template-columns:repeat(3,minmax(0,1fr))}.tithe .v{font-size:40px}}
@@ -549,7 +550,7 @@ function exemploGastos() {
   return out
 }
 
-const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, extrato: [], live: false, demo: true, view: 'hoje', meId: null }
+const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, extrato: [], agendaG: {}, live: false, demo: true, view: 'hoje', meId: null }
 let db = null, sample = null
 
 const CATS = { mercado: ['Mercado', 'shopping-cart'], restaurante: ['Restaurante', 'utensils'], transporte: ['Transporte', 'car'], casa: ['Casa', 'home'], saude: ['Saúde', 'heart-pulse'], lazer: ['Lazer', 'ticket'], compras: ['Compras', 'shopping-bag'], outros: ['Outros', 'circle-dot'] }
@@ -1501,32 +1502,49 @@ let agMes = 0
 function vAgenda(c) {
   const base = new Date(c.t.getFullYear(), c.t.getMonth() + agMes, 1), y = base.getFullYear(), m = base.getMonth()
   const dias = new Date(y, m + 1, 0).getDate(), ini = base.getDay(), ev = eventosDoMes(y, m)
+  const mk = `${y}-${String(m + 1).padStart(2, '0')}`
+  const gev = Object.entries(S.agendaG || {}).flatMap(([p, a]) => (a.itens || []).map((e) => ({ ...e, quem: p, dia: +String(e.inicio).slice(8, 10), mk: String(e.inicio).slice(0, 7), hora: e.diaTodo ? '' : String(e.inicio).slice(11, 16) }))).filter((e) => e.mk === mk)
   const cells = []
   for (let i = 0; i < ini; i++) cells.push('<div class="d out"></div>')
   for (let d = 1; d <= dias; d++) {
     const es = ev.filter((e) => e.dia === d), isT = agMes === 0 && d === c.dia
-    cells.push(`<div class="d ${isT ? 'today' : ''}"><span class="n">${d}</span>${es.map((e) => `<span class="ev ${e.tipo}" title="${esc(e.titulo)} ${brl(e.valor, false)}">${esc(e.titulo)}</span>`).join('')}</div>`)
+    cells.push(`<div class="d ${isT ? 'today' : ''}"><span class="n">${d}</span>${es.map((e) => `<span class="ev ${e.tipo}" title="${esc(e.titulo)} ${brl(e.valor, false)}">${esc(e.titulo)}</span>`).join('')}${gev.filter((e) => e.dia === d).map((e) => `<span class="ev google" title="${esc(e.titulo)} (${PESSOAS[e.quem] || ''})">${e.hora ? e.hora + ' ' : ''}${esc(e.titulo)}</span>`).join('')}</div>`)
   }
-  const prox = ev.filter((e) => agMes > 0 || e.dia >= c.dia)
+  const prox = [...ev.filter((e) => agMes > 0 || e.dia >= c.dia).map((e) => ({ ...e, g: false })), ...gev.filter((e) => agMes > 0 || e.dia >= c.dia).map((e) => ({ ...e, g: true }))].sort((a, b) => a.dia - b.dia || (a.g ? 1 : 0) - (b.g ? 1 : 0))
   return `
   <div class="grid g2">
     <section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="calendar"></i></span>${MES_L[m].replace(/^./, (x) => x.toUpperCase())} ${y}</h3>
       <div style="display:flex;gap:6px"><button class="round" style="width:38px;height:38px;border:1.5px solid var(--line)" type="button" data-agmes="-1" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button><button class="round" style="width:38px;height:38px;border:1.5px solid var(--line)" type="button" data-agmes="1" aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button></div></div>
       <div class="card-b"><div class="cal">${['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map((w) => `<div class="wd">${w}</div>`).join('')}${cells.join('')}</div>
-      <div class="legend" style="margin-top:14px"><span><i style="background:#fdeee6"></i>Contas</span><span><i style="background:#e8efff"></i>Cartões</span><span><i style="background:var(--ok-soft)"></i>Salário</span><span><i style="background:var(--lime)"></i>Investir</span><span><i style="background:#f3e8ff"></i>Dízimo</span></div></div></section>
+      <div class="legend" style="margin-top:14px"><span><i style="background:#fdeee6"></i>Contas</span><span><i style="background:#e8efff"></i>Cartões</span><span><i style="background:var(--ok-soft)"></i>Salário</span><span><i style="background:var(--lime)"></i>Investir</span><span><i style="background:#f3e8ff"></i>Dízimo</span>${conectadoG() ? '<span><i style="background:#4285f4"></i>Google</span>' : ''}</div></div></section>
     <section class="card"><div class="card-h"><h3>Próximos</h3><small>${prox.length} eventos</small></div>
-      <div class="card-b"><div class="list">${prox.map((e) => `<div class="li"><div class="date-chip"><b>${e.dia}</b><span>${MES[m]}</span></div><div class="main-t"><b>${esc(e.titulo)}</b><span>${e.quem ? ph(e.quem, 'sm') + PESSOAS[e.quem] + ' · ' : ''}${brl(e.valor, false)}${e.pago ? ' · paga' : ''}</span></div><a class="btn btn-sm" href="${gcalLink(e)}" target="_blank" rel="noopener" aria-label="Adicionar ${esc(e.titulo)} ao Google Agenda"><i data-lucide="calendar-plus"></i>Google</a></div>`).join('')}</div></div></section>
+      <div class="card-b"><div class="list">${prox.slice(0, 25).map((e) => e.g ? `<div class="li"><div class="date-chip"><b>${e.dia}</b><span>${MES[m]}</span></div><div class="main-t"><b>${esc(e.titulo)}</b><span>${ph(e.quem, 'sm')}${PESSOAS[e.quem] || ''} · ${e.hora || 'dia todo'}${e.local ? ' · ' + esc(e.local).slice(0, 40) : ''}</span></div><span class="pill fm-credito">Google</span></div>` : `<div class="li"><div class="date-chip"><b>${e.dia}</b><span>${MES[m]}</span></div><div class="main-t"><b>${esc(e.titulo)}</b><span>${e.quem ? ph(e.quem, 'sm') + PESSOAS[e.quem] + ' · ' : ''}${brl(e.valor, false)}${e.pago ? ' · paga' : ''}</span></div>${conectadoG() ? '' : `<a class="btn btn-sm" href="${gcalLink(e)}" target="_blank" rel="noopener" aria-label="Adicionar ${esc(e.titulo)} ao Google Agenda"><i data-lucide="calendar-plus"></i>Google</a>`}</div>`).join('')}</div></div></section>
   </div>
-  <section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="refresh-cw"></i></span>Google Agenda</h3><span class="pill warn">sincronização automática na versão do Supabase</span></div>
-    <div class="card-b" style="display:flex;flex-direction:column;gap:10px">
-      <div class="gcal"><div class="gmark"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="3" fill="#fff" stroke="#4285F4" stroke-width="2"/><rect x="3" y="4" width="18" height="5" rx="2" fill="#4285F4"/><text x="12" y="18.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#4285F4" font-family="Arial">31</text></svg></div><div class="main-t"><b>Todas as contas de uma vez</b><span>Baixa um arquivo .ics com as contas, o salário e o lembrete de investir, repetindo todo mês e com aviso na véspera. No Google Agenda: Configurações › Importar.</span></div><button class="btn btn-primary btn-sm" type="button" id="icsBtn"><i data-lucide="download"></i>Baixar agenda</button></div>
-      <div class="gcal"><div class="gmark"><i data-lucide="calendar-plus"></i></div><div class="main-t"><b>Uma conta por vez</b><span>O botão "Google" em cada evento abre o Google Agenda com o evento pronto, mensal. Bom para a Tainara colocar as dela na agenda dela.</span></div></div>
-      <div class="gcal"><div class="gmark"><i data-lucide="link"></i></div><div class="main-t"><b>Ler a agenda de vocês aqui dentro</b><span>Mostrar compromissos do Google Agenda nesta tela (viagem marcada, aniversário, consulta) pede a conexão do Google Agenda no claude.ai ou a API do Google no Supabase. Fica para a próxima etapa.</span></div></div>
+  ${googleCard()}`
+}
+const conectadoG = () => Object.values(S.agendaG || {}).some((a) => a.conectado)
+function googleCard() {
+  const eu = window.claudeUser?.pessoa?.()
+  const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+  const linha = (p) => { const a = (S.agendaG || {})[p]; const ok = a?.conectado
+    return `<div class="li">${ph(p, 'md')}<div class="main-t"><b>Google Agenda ${p === 'gabriel' ? 'do Gabriel' : 'da Tainara'}</b><span>${ok ? `${esc(a.email || '')} · ${(a.itens || []).length} compromissos lidos · atualizado ${quando(a.atualizado)}` : p === 'tainara' ? 'A conta da Tainara é Gmail: a conexão dela vai pelo link secreto da agenda (próxima etapa).' : 'Ainda não conectado.'}</span></div>${ok ? `<span class="pill ok">conectado</span>${p === eu ? `<button class="btn btn-sm btn-ghost" type="button" data-gdesc="1">Desconectar</button>` : ''}` : p === eu && p !== 'tainara' && window.nossoCaixa ? `<button class="btn btn-primary btn-sm" type="button" data-gcon="1"><i data-lucide="link"></i>Conectar</button>` : ''}</div>` }
+  return `<section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="calendar-sync"></i></span>Google Agenda</h3>${conectadoG() && window.nossoCaixa ? `<button class="btn btn-sm" type="button" data-gsync="1"><i data-lucide="refresh-cw"></i>Sincronizar</button>` : ''}</div>
+    <div class="card-b"><div class="list">${linha('gabriel')}${linha('tainara')}</div>
+    <p class="note" style="margin:10px 0 0">Quem conecta ganha no Google uma agenda "Nosso Caixa" com as contas, o salário, o dízimo e o lembrete de investir, todo mês, com aviso na véspera. Os compromissos de vocês aparecem aqui no calendário. Atualiza sozinho a cada hora.</p>
+    ${conectadoG() ? '' : `<div class="gcal" style="margin-top:12px"><div class="gmark"><i data-lucide="download"></i></div><div class="main-t"><b>Sem conectar</b><span>Baixe um arquivo com todas as contas e importe no Google Agenda (Configurações › Importar).</span></div><button class="btn btn-sm" type="button" id="icsBtn"><i data-lucide="download"></i>Baixar agenda</button></div>`}
     </div></section>`
 }
+async function gCall(acao) {
+  const { data, error } = await window.sb.functions.invoke('gcal', { body: { acao } })
+  if (error) { const ctx = await error.context?.json?.().catch(() => null); throw new Error(ctx?.message || error.message) }
+  return data
+}
 after.agenda = () => {
+  document.querySelector('[data-gcon]')?.addEventListener('click', async () => { try { location.href = (await gCall('conectar')).url } catch (e) { toast(e.message) } })
+  document.querySelector('[data-gsync]')?.addEventListener('click', async (e) => { e.currentTarget.disabled = true; try { await gCall('sincronizar'); toast('Agenda sincronizada.') } catch (err) { toast(err.message) } render() })
+  document.querySelector('[data-gdesc]')?.addEventListener('click', async (e) => { const b = e.currentTarget; if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Desconectar mesmo?'; return } try { await gCall('desconectar'); toast('Google Agenda desconectado.') } catch (err) { toast(err.message) } })
   document.querySelectorAll('[data-agmes]').forEach((b) => b.addEventListener('click', () => { agMes = Math.max(-1, Math.min(6, agMes + +b.dataset.agmes)); render() }))
-  document.getElementById('icsBtn').addEventListener('click', async () => {
+  document.getElementById('icsBtn')?.addEventListener('click', async () => {
     const txt = icsTexto()
     try { const dl = await window.claude?.use?.('downloads'); if (!dl) throw 0; await dl.save({ filename: 'nosso-caixa.ics', data: new Blob([txt], { type: 'text/calendar' }) }); toast('Agenda baixada. Importe no Google Agenda.') }
     catch (e) { if (e?.code === 'declined') return; try { await navigator.clipboard.writeText(txt); toast('Não deu para baixar aqui; copiei o conteúdo do .ics.') } catch { toast('Não deu para baixar nesta visualização.') } }
@@ -1634,6 +1652,7 @@ route()
   db.collection('contas').onSnapshot((q) => { if (!q.empty) S.contas = q.docs.map((d) => ({ ...(BASE_CONTAS.find((b) => b.id === d.id) || {}), id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('gastos').onSnapshot((q) => { S.gastos = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('aportes').onSnapshot((q) => { S.aportes = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
+  db.collection('agenda_eventos').onSnapshot((q) => { S.agendaG = {}; q.docs.forEach((d) => { S.agendaG[d.id] = d.data() }); rerender() }, () => {})
   db.collection('extrato').onSnapshot((q) => { S.extrato = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('pluggy_items').onSnapshot((q) => { S.pluggy = {}; q.docs.forEach((d) => { S.pluggy[d.id] = d.data() }); rerender() }, () => {})
   db.collection('dizimos').onSnapshot((q) => { S.dizimos = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
