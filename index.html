@@ -391,6 +391,14 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 details.canc summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-3);margin-top:8px}
 @media (max-width:1040px){.subs{grid-template-columns:minmax(0,1fr)}}
 
+/* formas de pagamento */
+.pill.fm-credito{background:#e8efff;color:#1d4fb8}.pill.fm-debito{background:#f3e8ff;color:#6b21a8}.pill.fm-pix{background:#e0f7f4;color:#0f766e}
+.pill.fm-boleto,.pill.fm-conta_consumo{background:#fdeee6;color:#9b3d12}.pill.fm-entrada{background:var(--ok-soft);color:var(--ok)}.pill.fm-dinheiro{background:#fef3c7;color:#92400e}
+:root[data-theme="dark"] .pill.fm-credito{background:#16223f;color:#9ab8f7}:root[data-theme="dark"] .pill.fm-debito{background:#2a1840;color:#d8b4fe}:root[data-theme="dark"] .pill.fm-pix{background:#0f2a27;color:#5eead4}:root[data-theme="dark"] .pill.fm-boleto,:root[data-theme="dark"] .pill.fm-conta_consumo{background:#3a1f12;color:#f4a77c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.fm-credito{background:#16223f;color:#9ab8f7}:root:not([data-theme="light"]) .pill.fm-debito{background:#2a1840;color:#d8b4fe}:root:not([data-theme="light"]) .pill.fm-pix{background:#0f2a27;color:#5eead4}:root:not([data-theme="light"]) .pill.fm-boleto,:root:not([data-theme="light"]) .pill.fm-conta_consumo{background:#3a1f12;color:#f4a77c}}
+.li .main-t span .pill{font-size:10px;padding:2px 7px}
+.t .ph{display:inline-block;vertical-align:-5px;margin-right:4px}
+
 /* faturas */
 .drop{border:2px dashed var(--ink-4);border-radius:var(--r-lg);padding:26px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--surface-2);cursor:pointer;position:relative}
 .drop.over{border-color:var(--forest-2);background:var(--lime-soft)}
@@ -489,7 +497,7 @@ function exemploGastos() {
   return out
 }
 
-const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, live: false, demo: true, view: 'hoje', meId: null }
+const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, extrato: [], live: false, demo: true, view: 'hoje', meId: null }
 let db = null, sample = null
 
 const CATS = { mercado: ['Mercado', 'shopping-cart'], restaurante: ['Restaurante', 'utensils'], transporte: ['Transporte', 'car'], casa: ['Casa', 'home'], saude: ['Saúde', 'heart-pulse'], lazer: ['Lazer', 'ticket'], compras: ['Compras', 'shopping-bag'], outros: ['Outros', 'circle-dot'] }
@@ -682,6 +690,9 @@ function vHoje(c) {
 
 `
 }
+const FORMAS = { credito: ['crédito', 'credit-card'], debito: ['débito', 'wallet'], pix: ['Pix', 'zap'], boleto: ['boleto', 'barcode'], conta_consumo: ['conta de consumo', 'receipt'], emprestimo: ['empréstimo', 'landmark'], transferencia: ['transferência', 'arrow-left-right'], dinheiro: ['dinheiro', 'banknote'], entrada: ['entrada', 'arrow-down-left'], estorno: ['estorno', 'undo-2'], outros: ['outros', 'circle-dot'] }
+const formaDe = (g) => g.forma || (g.cartao ? 'credito' : /dinheiro/i.test(g.conta || '') ? 'dinheiro' : /pix/i.test(g.conta || '') ? 'pix' : 'debito')
+const pillForma = (f) => `<span class="pill fm-${f}">${(FORMAS[f] || FORMAS.outros)[0]}</span>`
 const segPeriodo = (on) => `<div class="seg" role="group" aria-label="Período">${[['hoje', 'Hoje'], ['mes', 'Mês']].map(([id, t]) => `<a href="#${id}" style="text-decoration:none"><span ${on === id ? 'aria-pressed="true"' : ''}>${t}</span></a>`).join('')}</div>`
 function dizimoStatus(c) {
   const feito = S.dizimos.find((d) => d.data.startsWith(c.mk) && d.tipo !== 'oferta')
@@ -690,7 +701,7 @@ function dizimoStatus(c) {
 function movLi(x) {
   const d = parse(x.data), cat = CATS[x.cat] || CATS.outros, hojeIso = iso(hoje())
   const quando = x.data === hojeIso ? 'Hoje' : x.data === iso(new Date(hoje().getTime() - 864e5)) ? 'Ontem' : `${d.getDate()} ${MES[d.getMonth()]}`
-  return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${quando} · ${esc(x.conta || '')}${x.origem === 'pluggy' ? ' · <i data-lucide="landmark" style="width:11px;height:11px"></i> banco' : ''}</span></div><div class="val num neg">−${brl(+x.valor).replace('R$ ', 'R$ ')}</div></div>`
+  return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${quando} · ${esc(x.conta || '')}${x.origem === 'pluggy' ? ' · <i data-lucide="landmark" style="width:11px;height:11px"></i> banco' : ''}</span></div><div class="val num neg">−${brl(+x.valor).replace('R$ ', 'R$ ')}</div></div>`
 }
 after.hoje = () => { document.getElementById('goGasto')?.addEventListener('click', openGasto) }
 
@@ -704,7 +715,7 @@ function contaLi(x, c) {
 function ultimos(n) {
   const g = [...S.gastos].sort((a, b) => (b.data + (b.ts || '')).localeCompare(a.data + (a.ts || ''))).slice(0, n)
   if (!g.length) return '<div class="note">Nenhum gasto lançado ainda. Use o formulário acima ou mande no grupo do WhatsApp.</div>'
-  return g.map((x) => { const d = parse(x.data); const cat = CATS[x.cat] || CATS.outros; return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${d.getDate()} ${MES[d.getMonth()]} · ${PESSOAS[x.quem] || ''} · ${esc(x.conta || '')}</span></div><div class="val num">${brl(+x.valor)}</div>${S.demo ? '' : `<button class="btn btn-sm btn-ghost" type="button" data-del="${x.id}" aria-label="Apagar gasto"><i data-lucide="trash-2"></i></button>`}</div>` }).join('')
+  return g.map((x) => { const d = parse(x.data); const cat = CATS[x.cat] || CATS.outros; return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${d.getDate()} ${MES[d.getMonth()]} · ${PESSOAS[x.quem] || ''} · ${esc(x.conta || '')}</span></div><div class="val num">${brl(+x.valor)}</div>${S.demo ? '' : `<button class="btn btn-sm btn-ghost" type="button" data-del="${x.id}" aria-label="Apagar gasto"><i data-lucide="trash-2"></i></button>`}</div>` }).join('')
 }
 function formGasto() {
   return `<form class="form" id="fGasto">
@@ -717,7 +728,7 @@ function formGasto() {
     <div class="fld w3" style="justify-content:flex-end"><button class="btn btn-primary" type="submit" style="justify-content:center"><i data-lucide="plus"></i>Lançar gasto</button></div>
   </form>`
 }
-const pagouCom = (v) => { const x = CARTOES().find((k) => k.id === v); return x ? { conta: rotuloCartao(x), cartao: x.id } : { conta: v === 'dinheiro' ? 'Dinheiro' : 'Pix/débito', cartao: null } }
+const pagouCom = (v) => { const x = CARTOES().find((k) => k.id === v); return x ? { conta: rotuloCartao(x), cartao: x.id, forma: 'credito' } : { conta: v === 'dinheiro' ? 'Dinheiro' : 'Pix/débito', cartao: null, forma: v === 'dinheiro' ? 'dinheiro' : 'pix' } }
 function bindGasto() {
   const f = document.getElementById('fGasto'); if (!f) return
   document.getElementById('gConta').addEventListener('change', (e) => { const x = CARTOES().find((k) => k.id === e.target.value); if (x) { const r = f.querySelector(`input[name=gQuem][value=${x.quem}]`); if (r) r.checked = true } })
@@ -773,11 +784,37 @@ function vMes(c) {
       <div class="card-b"><div class="list">${cats.length ? cats.map(([id, v]) => `<div class="li"><div class="ico"><i data-lucide="${(CATS[id] || CATS.outros)[1]}"></i></div><div class="main-t"><b>${(CATS[id] || CATS.outros)[0]}</b><div class="bar" style="margin-top:6px"><i style="width:${(v / maxCat) * 100}%;background:var(--ink)"></i></div></div><div class="val num">${brl(v, false)}</div></div>`).join('') : '<div class="note">Sem gastos no mês.</div>'}</div>
       <div class="legend" style="margin-top:12px">${Object.entries(porPessoa).map(([p, v]) => `<span style="display:inline-flex;align-items:center;gap:6px">${ph(p, 'sm')}${PESSOAS[p]} ${brl(v, false)}</span>`).join('')}${Object.entries(porConta).map(([b, v]) => `<span>${esc(b)} ${brl(v, false)}</span>`).join('')}</div></div></section>
   </div>
+  ${vExtrato(c)}
   <section class="card"><div class="card-h"><h3>Contas fixas do mês</h3><small>marque quando pagar; o assistente lembra no dia anterior</small></div>
     <div class="card-b"><div class="list">${S.contas.slice().sort((a, b) => a.dia - b.dia).map((x) => { const q = new Date(c.t.getFullYear(), c.t.getMonth(), Math.min(x.dia, c.dias)); const pago = !!S.pagos[`${c.mk}_${x.id}`]; return contaLi({ ...x, quando: q, pago, atrasada: q < c.t && !pago, em: Math.round((q - c.t) / 864e5) }, c) }).join('')}</div></div></section>`
 }
 
-after.mes = (c) => chartDias(c)
+let extFiltro = 'tudo', extMes = 0
+function vExtrato(c) {
+  const base = new Date(c.t.getFullYear(), c.t.getMonth() + extMes, 1), mk = mesKey(base), hj = iso(c.t)
+  const doMes = S.extrato.filter((e) => e.data.startsWith(mk) && e.data <= hj)
+  const F = { tudo: () => true, entradas: (e) => e.valor > 0, credito: (e) => e.meio === 'credito', debito: (e) => e.meio === 'debito', pix: (e) => e.meio === 'pix', boleto: (e) => e.meio === 'boleto' || e.meio === 'conta_consumo' }
+  const lista = doMes.filter(F[extFiltro]).sort((a, b) => b.data.localeCompare(a.data) || a.valor - b.valor)
+  const soma = (f) => doMes.filter(f).reduce((a, e) => a + e.valor, 0)
+  const chips = [['tudo', 'Tudo'], ['entradas', 'Entradas'], ['credito', 'Crédito'], ['debito', 'Débito'], ['pix', 'Pix'], ['boleto', 'Boleto e contas']]
+  return `<section class="card" id="extrato"><div class="card-h"><h3><span class="hi"><i data-lucide="scroll-text"></i></span>Extrato</h3>
+      <div style="display:flex;gap:6px;align-items:center"><button class="round" style="width:34px;height:34px;border:1.5px solid var(--line)" type="button" data-extmes="-1" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button><b style="min-width:110px;text-align:center">${MES_L[base.getMonth()].replace(/^./, (x) => x.toUpperCase())} ${base.getFullYear()}</b><button class="round" style="width:34px;height:34px;border:1.5px solid var(--line)" type="button" data-extmes="1" ${extMes >= 0 ? 'disabled' : ''} aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button></div></div>
+    <div class="card-b">
+      <div class="grid g4" style="margin-bottom:14px">
+        <div class="stat"><div class="k">Entradas</div><div class="v num ok">${brl(soma((e) => e.valor > 0), false)}</div></div>
+        <div class="stat"><div class="k">Crédito (cartão)</div><div class="v num">${brl(-soma((e) => e.meio === 'credito'), false)}</div></div>
+        <div class="stat"><div class="k">Débito</div><div class="v num">${brl(-soma((e) => e.meio === 'debito'), false)}</div></div>
+        <div class="stat"><div class="k">Pix, boletos e contas</div><div class="v num">${brl(-soma((e) => ['pix', 'boleto', 'conta_consumo', 'transferencia', 'emprestimo', 'outros'].includes(e.meio) && e.valor < 0), false)}</div></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${chips.map(([id, t]) => `<button class="chip-btn ${extFiltro === id ? 'on' : ''}" type="button" data-extf="${id}">${t} <span class="muted">${doMes.filter(F[id]).length}</span></button>`).join('')}</div>
+      ${lista.length ? `<div class="tbl"><table class="t num"><thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th>Conta</th><th>No app</th><th class="r">Valor</th></tr></thead><tbody>${lista.map((e) => `<tr><td>${fdc(parse(e.data))}</td><td class="desc" title="${esc(e.desc)}">${esc(e.desc)}${e.parcela ? ` <span class="muted">${esc(e.parcela)}</span>` : ''}${e.pendente ? ' <span class="pill" style="font-size:10px">na fatura aberta</span>' : ''}</td><td>${pillForma(e.meio)}</td><td style="white-space:nowrap">${ph(e.quem, 'sm')} ${esc(e.conta)}</td><td class="muted" style="font-size:12px">${esc(e.destino || '')}</td><td class="r ${e.valor > 0 ? 'ok' : ''}">${e.valor > 0 ? '+' : ''}${brl(e.valor)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="note">${S.extrato.length ? 'Nada neste filtro.' : 'O extrato aparece aqui quando um banco estiver conectado pelo Meu Pluggy (Ajustes › Bancos).'}</div>`}
+    </div></section>`
+}
+after.mes = (c) => {
+  chartDias(c)
+  document.querySelectorAll('[data-extf]').forEach((b) => b.addEventListener('click', () => { extFiltro = b.dataset.extf; render(); document.getElementById('extrato')?.scrollIntoView({ block: 'start' }) }))
+  document.querySelectorAll('[data-extmes]').forEach((b) => b.addEventListener('click', () => { extMes = Math.min(0, Math.max(-2, extMes + +b.dataset.extmes)); render(); document.getElementById('extrato')?.scrollIntoView({ block: 'start' }) }))
+}
 function vMetas(c) {
   const ms = metas()
   const totalG = ms.reduce((a, m) => a + m.guardado, 0)
@@ -1542,6 +1579,7 @@ route()
   db.collection('contas').onSnapshot((q) => { if (!q.empty) S.contas = q.docs.map((d) => ({ ...(BASE_CONTAS.find((b) => b.id === d.id) || {}), id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('gastos').onSnapshot((q) => { S.gastos = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('aportes').onSnapshot((q) => { S.aportes = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
+  db.collection('extrato').onSnapshot((q) => { S.extrato = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('pluggy_items').onSnapshot((q) => { S.pluggy = {}; q.docs.forEach((d) => { S.pluggy[d.id] = d.data() }); rerender() }, () => {})
   db.collection('dizimos').onSnapshot((q) => { S.dizimos = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('entradas').onSnapshot((q) => { S.entradas = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
