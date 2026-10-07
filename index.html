@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1e4a10">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231e4a10'/%3E%3Crect x='10' y='10' width='12' height='12' rx='2' fill='%23b9ef7a'/%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Nosso Caixa">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231e4a10'/%3E%3Crect x='10' y='10' width='12' height='12' rx='2' fill='%23b9ef7a'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 html{-webkit-text-size-adjust:100%}
@@ -399,6 +405,51 @@ details.canc summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--i
 .li .main-t span .pill{font-size:10px;padding:2px 7px}
 .t .ph{display:inline-block;vertical-align:-5px;margin-right:4px}
 
+/* blocos recolhíveis (abertos no computador, fechados no celular) */
+details.dobra > summary{list-style:none}
+details.dobra > summary::-webkit-details-marker{display:none}
+@media (min-width: 721px){details.dobra > summary{display:none}}
+/* navegação: ícones só no celular */
+.tabs a svg.lucide{display:none}
+.fab{display:none}
+@media (max-width: 720px){
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .shell{padding-bottom:24px}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;order:initial;width:auto;flex-basis:auto;justify-content:space-around;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));gap:0;box-shadow:0 -4px 20px rgba(0,0,0,.05)}
+  nav.tabs a{flex-direction:column;gap:3px;height:auto;padding:6px 4px;font-size:11px;border-radius:14px;flex:1;justify-content:center}
+  nav.tabs a svg.lucide{display:block;width:21px;height:21px}
+  nav.tabs a[aria-current="page"]{background:var(--lime-soft);color:var(--lime-ink)}
+  .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--forest);color:#fff;z-index:21;box-shadow:0 8px 24px rgba(30,74,16,.35);cursor:pointer}
+  .fab svg.lucide{width:26px;height:26px}
+  .topbar{gap:10px}
+  .top-r .round,.top-r .bellpill{width:40px;height:40px}
+  .top-r .bellpill{width:auto;padding:0 12px}
+  .page-h{margin:14px 2px 10px}
+  .page-h h1{font-size:22px}
+  .so-desk{display:none}
+  html,body{overflow-x:hidden}
+  .page > *{max-width:100%}
+  .gcal{flex-wrap:wrap}
+  .gcal .btn{margin-left:52px}
+  .bal-foot .go{display:none}
+  .bal-foot .grow{display:none}
+  details.dobra > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:16px;font:600 17px var(--font-display)}
+  details.dobra > summary::after{content:'+';font-size:22px;color:var(--ink-3)}
+  details.dobra[open] > summary::after{content:'–'}
+  details.dobra > summary + *{margin-top:-8px}
+  .bal{padding:18px}
+  .bal-top .seg{order:2}
+  .bal .big{font-size:42px}
+  .bal-foot .go{width:52px;height:52px}
+  .reward{padding:18px}
+  .reward .v{font-size:30px}
+  .card-h{padding:16px 16px 0}
+  .card-b{padding:12px 16px 18px}
+  .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  .t td,.t th{padding:8px 6px}
+  .t td.desc{max-width:150px}
+}
+
 /* faturas */
 .drop{border:2px dashed var(--ink-4);border-radius:var(--r-lg);padding:26px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--surface-2);cursor:pointer;position:relative}
 .drop.over{border-color:var(--forest-2);background:var(--lime-soft)}
@@ -457,6 +508,7 @@ details.itens summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--
   <form class="chat-f" id="chatForm"><input id="chatIn" placeholder="Ex.: dá pra jantar fora sábado?" autocomplete="off"><button class="btn btn-primary" type="submit">Enviar</button></form>
 </aside>
 <div class="modal" id="mGasto" hidden><div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="mgT"><div class="card-h"><h3 id="mgT">Lançar gasto</h3><button class="round" style="width:38px;height:38px;border:1.5px solid var(--line)" type="button" id="mgX" aria-label="Fechar"><i data-lucide="x"></i></button></div><div class="card-b" id="mgBody"></div></div></div>
+<button class="fab" id="fab" type="button" aria-label="Lançar gasto"><i data-lucide="plus"></i></button>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
@@ -592,7 +644,7 @@ const VIEWS = {
 }
 const ANTIGAS = { faturas: 'cartoes', assistente: 'ajustes', dizimo: 'hoje' }
 function nav() {
-  document.getElementById('nav').innerHTML = Object.entries(VIEWS).filter(([, v]) => !v.aba).map(([id, v]) => `<a href="#${id}" ${(VIEWS[S.view].aba || S.view) === id ? 'aria-current="page"' : ''}>${v.t}</a>`).join('')
+  document.getElementById('nav').innerHTML = Object.entries(VIEWS).filter(([, v]) => !v.aba).map(([id, v]) => `<a href="#${id}" ${(VIEWS[S.view].aba || S.view) === id ? 'aria-current="page"' : ''}><i data-lucide="${v.ico}"></i><span>${v.t}</span></a>`).join('')
 }
 function render() {
   const c = calc()
@@ -602,7 +654,8 @@ function render() {
   const h = new Date().getHours(); document.getElementById('greet').textContent = h < 12 ? 'Bom dia,' : h < 18 ? 'Boa tarde,' : 'Boa noite,'
   document.getElementById('duo').innerHTML = ph('gabriel') + ph('tainara')
   document.getElementById('bellN').textContent = proximasContas(c, 3).filter((x) => !x.pago).length
-  const banner = S.demo ? `<div class="banner"><i data-lucide="flask-conical"></i><div>Carregando os dados de vocês…</div></div>` : ''
+  const instalar = window.nossoCaixa && !window.nossoCaixa.instalado && matchMedia('(max-width: 720px)').matches && S.view === 'hoje' ? `<div class="banner" style="background:var(--lime-soft);color:var(--lime-ink)"><i data-lucide="smartphone"></i><div style="flex:1">Instale o Nosso Caixa no celular: abre como app, sem barra do navegador.</div><button class="btn btn-sm" type="button" onclick="window.nossoCaixa.instalar()">Instalar</button></div>` : ''
+  const banner = instalar + (S.demo ? `<div class="banner"><i data-lucide="flask-conical"></i><div>Carregando os dados de vocês…</div></div>` : '')
   document.getElementById('page').innerHTML = banner + VIEWS[S.view].r(c)
   icons()
   after[S.view]?.(c)
@@ -662,7 +715,7 @@ function vHoje(c) {
   </div>
 
   <div class="grid g3">
-    <section class="card">
+    <section class="card so-desk">
       <div class="card-h"><h3><span class="hi"><i data-lucide="shopping-bag"></i></span>Gastos</h3><span class="pill">${MES_L[c.t.getMonth()].replace(/^./, (x) => x.toUpperCase())}</span></div>
       <div class="card-b">
         <div class="ring"><svg viewBox="0 0 200 200" role="img" aria-label="${Math.round(frac * 100)}% do livre do mês gasto">${ring}</svg><div class="c"><div><b class="num">${brl(c.gastoMes)}</b><span class="${varPct > 0 ? 'bad' : 'ok'}">de ${brl(c.livre, false)}</span></div></div></div>
@@ -693,6 +746,7 @@ function vHoje(c) {
 const FORMAS = { credito: ['crédito', 'credit-card'], debito: ['débito', 'wallet'], pix: ['Pix', 'zap'], boleto: ['boleto', 'barcode'], conta_consumo: ['conta de consumo', 'receipt'], emprestimo: ['empréstimo', 'landmark'], transferencia: ['transferência', 'arrow-left-right'], dinheiro: ['dinheiro', 'banknote'], entrada: ['entrada', 'arrow-down-left'], estorno: ['estorno', 'undo-2'], outros: ['outros', 'circle-dot'] }
 const formaDe = (g) => g.forma || (g.cartao ? 'credito' : /dinheiro/i.test(g.conta || '') ? 'dinheiro' : /pix/i.test(g.conta || '') ? 'pix' : 'debito')
 const pillForma = (f) => `<span class="pill fm-${f}">${(FORMAS[f] || FORMAS.outros)[0]}</span>`
+const largo = () => matchMedia('(min-width: 721px)').matches
 const segPeriodo = (on) => `<div class="seg" role="group" aria-label="Período">${[['hoje', 'Hoje'], ['mes', 'Mês']].map(([id, t]) => `<a href="#${id}" style="text-decoration:none"><span ${on === id ? 'aria-pressed="true"' : ''}>${t}</span></a>`).join('')}</div>`
 function dizimoStatus(c) {
   const feito = S.dizimos.find((d) => d.data.startsWith(c.mk) && d.tipo !== 'oferta')
@@ -1136,7 +1190,7 @@ function vFaturas(c) {
   const mesOpts = [-1, 0, 1].map((d) => { const x = new Date(c.t.getFullYear(), c.t.getMonth() + d, 1); return [mesKey(x), `${MES_L[x.getMonth()]} ${x.getFullYear()}`] })
   const pre = fatPre || { cartao: ui.card, mes: ui.fat }; fatPre = null
   return `
-  <section class="card"><div class="card-h"><h3>Anexar fatura</h3><small>PDF, CSV ou OFX · Nubank e Porto</small></div>
+  <details class="card dobra" ${largo() || FAT ? 'open' : ''}><summary>Anexar fatura (PDF, CSV ou OFX)</summary><section><div class="card-h"><h3>Anexar fatura</h3><small>PDF, CSV ou OFX · Nubank e Porto</small></div>
     <div class="card-b" style="display:flex;flex-direction:column;gap:14px">
       <form class="form" onsubmit="return false">
         <label class="fld w3">Cartão<select id="fCartao">${cs.map((x) => `<option value="${x.id}" ${pre.cartao === x.id ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></label>
@@ -1144,7 +1198,7 @@ function vFaturas(c) {
       </form>
       <label class="drop" id="drop" for="fFile"><i data-lucide="file-up" style="width:22px;height:22px"></i><b>Arraste a fatura aqui ou clique para escolher</b><span>No app do Nubank: fatura fechada › compartilhar › CSV ou PDF. No Porto: baixe o PDF da fatura.</span><input id="fFile" type="file" accept=".pdf,.csv,.ofx,.qfx,application/pdf,text/csv"></label>
       <div id="fatPrev"></div>
-    </div></section>
+    </div></section></details>
   <section class="card"><div class="card-h"><h3>Faturas anexadas</h3><small>${lista.length ? lista.length + (lista.length === 1 ? ' fatura' : ' faturas') : 'nenhuma ainda'}</small></div>
     <div class="card-b">${lista.length ? `<div class="grid g2e">${lista.map(([id, f]) => fatCard(id, f)).join('')}</div>` : '<div class="note">Quando vocês anexarem, cada fatura aparece aqui com o total real, as categorias e o arquivo original. O total substitui o valor previsto do cartão no mês.</div>'}</div></section>`
 }
@@ -1234,7 +1288,7 @@ function vCartoes(c) {
       ${vFaturas(c)}
     </div>
     <div class="dash-side">
-      <section class="card"><div class="card-h"><h3>${ph(x.quem, 'sm')}${esc(x.nome)}</h3><small>${x.last4 ? 'dados conferidos' : '<span class="pill warn">confirmar dados</span>'}</small></div>
+      <details class="card dobra" ${largo() ? 'open' : ''}><summary>Dados do ${esc(x.nome.replace('Cartão d', 'cartão d'))}</summary><section><div class="card-h"><h3>${ph(x.quem, 'sm')}${esc(x.nome)}</h3><small>${x.last4 ? 'dados conferidos' : '<span class="pill warn">confirmar dados</span>'}</small></div>
         <div class="card-b"><form class="form" id="fCard" style="grid-template-columns:repeat(2,minmax(0,1fr))">
           <label class="fld">Banco<select id="ccBanco">${['Porto', 'Nubank', 'Outro'].map((b) => `<option ${x.banco === b ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
           <label class="fld">Final do cartão<input id="ccLast4" inputmode="numeric" maxlength="4" placeholder="0000" value="${esc(x.last4 || '')}"></label>
@@ -1243,8 +1297,8 @@ function vCartoes(c) {
           <label class="fld">Limite<input id="ccLim" inputmode="decimal" placeholder="0,00" value="${lim || ''}"></label>
           <label class="fld">Fatura prevista<input id="ccPrev" inputmode="decimal" value="${x.valor}"></label>
           <div class="fld" style="grid-column:span 2"><button class="btn btn-primary" type="submit" style="justify-content:center">Salvar cartão</button></div>
-        </form></div></section>
-      <section class="card"><div class="card-h"><h3>Lançar compra</h3></div>
+        </form></div></section></details>
+      <details class="card dobra" ${largo() ? 'open' : ''}><summary>Lançar compra parcelada</summary><section><div class="card-h"><h3>Lançar compra</h3></div>
         <div class="card-b"><form class="form" id="fCompra" style="grid-template-columns:repeat(2,minmax(0,1fr))">
           <label class="fld" style="grid-column:span 2">Descrição<input id="cpDesc" required placeholder="Ex.: passagem, Netflix, geladeira"></label>
           <label class="fld">Valor total<input id="cpValor" inputmode="decimal" placeholder="0,00" required></label>
@@ -1254,7 +1308,7 @@ function vCartoes(c) {
           <label class="check" style="grid-column:span 2"><input type="checkbox" id="cpAss"><span>Assinatura mensal (entra em todas as faturas)</span></label>
           <div class="fld" style="grid-column:span 2"><button class="btn btn-primary" type="submit" style="justify-content:center">Lançar no ${esc(x.nome.replace('Cartão d', '').replace(/^[ao] /, ''))}</button></div>
           <p class="note" style="grid-column:span 2;margin:0">À vista desconta do limite do dia. Parcelas e assinaturas entram como compromisso do mês. Comprando até ${fdc(cur.closing)}, vence em ${fdc(cur.due)}. A partir de ${fdc(melhor)}, vence em ${fdc(next.due)}.</p>
-        </form></div></section>
+        </form></div></section></details>
     </div>
   </div>`
 }
@@ -1523,10 +1577,11 @@ document.addEventListener('click', async (e) => {
 function openGasto() { const m = document.getElementById('mGasto'); document.getElementById('mgBody').innerHTML = formGasto(); m.hidden = false; icons(); bindGasto(); setTimeout(() => document.getElementById('gValor')?.focus(), 30) }
 function closeGasto() { document.getElementById('mGasto').hidden = true }
 document.getElementById('addBtn')?.addEventListener('click', openGasto)
+document.getElementById('fab').addEventListener('click', openGasto)
 document.getElementById('mgX').addEventListener('click', closeGasto)
 document.getElementById('mGasto').addEventListener('click', (e) => { if (e.target.id === 'mGasto') closeGasto() })
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('mGasto').hidden) closeGasto() })
-function route() { let h = location.hash.slice(1); if (ANTIGAS[h]) h = ANTIGAS[h]; S.view = VIEWS[h] ? h : 'hoje'; render(); window.scrollTo(0, 0) }
+function route() { let h = location.hash.slice(1); if (h === 'novo-gasto') { history.replaceState(null, '', '#hoje'); h = 'hoje'; setTimeout(openGasto, 300) } if (ANTIGAS[h]) h = ANTIGAS[h]; S.view = VIEWS[h] ? h : 'hoje'; render(); window.scrollTo(0, 0) }
 window.addEventListener('hashchange', route)
 let tt; function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => (t.hidden = true), 2600) }
 
@@ -1627,6 +1682,15 @@ route()
   })
 })()
 window.nossoCaixa.trocarSenha = (e) => { e.preventDefault(); const v = document.getElementById('novaSenha').value; if (v.length < 8) { toast('Use pelo menos 8 caracteres.'); return false } window.sb.auth.updateUser({ password: v }).then(({ error }) => toast(error ? 'Não consegui trocar a senha.' : 'Senha trocada.')); return false }
+// PWA: guarda a tela no aparelho e oferece instalar
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}))
+let pedidoInstalar = null
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; window.nossoCaixa.podeInstalar = true; try { render() } catch {} })
+window.nossoCaixa.instalar = async () => {
+  if (pedidoInstalar) { pedidoInstalar.prompt(); await pedidoInstalar.userChoice.catch(() => {}); pedidoInstalar = null; window.nossoCaixa.podeInstalar = false; render(); return }
+  toast(/iphone|ipad/i.test(navigator.userAgent) ? 'No iPhone: toque em Compartilhar e depois em "Adicionar à Tela de Início".' : 'No menu do navegador, toque em "Instalar app" ou "Adicionar à tela inicial".')
+}
+window.nossoCaixa.instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 // arquivo de fatura: abre por link temporário
 document.addEventListener('click', async (e) => { const a = e.target.closest('[data-arquivo]'); if (!a) return; e.preventDefault(); try { (await window.claude.use('assets')).abrir(a.dataset.arquivo) } catch { toast('Não consegui abrir o arquivo.') } })
 </script>
