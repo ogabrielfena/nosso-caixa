@@ -1324,7 +1324,8 @@ after.dizimo = (c) => {
 const SUB_RE = /netflix|spotify|disney|hbo|\bmax\b|prime video|amazon prime|apple\.com|icloud|google (one|storage)|youtube|deezer|globoplay|paramount|crunchyroll|chatgpt|openai|claude|anthropic|canva|adobe|microsoft|office 365|dropbox|notion|duolingo|gympass|wellhub|smart ?fit|academia|ifood clube|uber one|meli\+|mercado pago assin|playstation|xbox|nintendo|kindle|audible|tinder|bumble|linkedin premium|strava/i
 const COR_SUB = ['#e50914', '#1db954', '#3b82f6', '#8b5cf6', '#f06a2b', '#0ea5a4', '#d946ef', '#eab308']
 const corSub = (n) => COR_SUB[[...String(n)].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COR_SUB.length]
-const limpaNome = (d) => String(d || '').replace(/\*|\d{2}\/\d{2}|parcela.*$/gi, ' ').replace(/\s+/g, ' ').trim()
+const NOMES_SUB = [[/apple\.com|itunes/i, 'Apple (iCloud e afins)'], [/google workspace/i, 'Google Workspace'], [/ultravioleta/i, 'Anuidade Nubank Ultravioleta'], [/spotify/i, 'Spotify'], [/ifood club/i, 'iFood Club'], [/netflix/i, 'Netflix'], [/youtube/i, 'YouTube Premium'], [/amazon prime|primevideo/i, 'Amazon Prime'], [/disney/i, 'Disney+'], [/chatgpt|openai/i, 'ChatGPT'], [/claude|anthropic/i, 'Claude']]
+const limpaNome = (d) => { const s0 = String(d || ''); const m = NOMES_SUB.find(([re]) => re.test(s0)); if (m) return m[1]; return s0.replace(/^(ebn|ifd|pg|mp|dm)\s*\*/i, '').replace(/_[a-z]+$/i, '').replace(/\*|\d{2}\/\d{2}|parcela.*$/gi, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase()) }
 function assinaturas() { return S.compras.filter((cp) => cp.assinatura) }
 function sugestoesAssinatura() {
   const ja = new Set(assinaturas().map((a) => limpaNome(a.desc).toLowerCase()))
@@ -1338,7 +1339,7 @@ function vAssinaturas(c) {
   const ativas = assinaturas().filter((a) => !a.cancelada), canc = assinaturas().filter((a) => a.cancelada)
   const total = ativas.reduce((a, x) => a + +x.valor, 0), sug = sugestoesAssinatura(), cs = CARTOES()
   const porCartao = cs.map((x) => [x, ativas.filter((a) => a.cartao === x.id).reduce((a, b) => a + +b.valor, 0)])
-  const linha = (a) => { const x = cs.find((k) => k.id === a.cartao); const dia = parse(a.data).getDate(); return `<div class="li"><div class="sub-ic" style="background:${corSub(a.desc)}">${esc(limpaNome(a.desc).charAt(0).toUpperCase() || '•')}</div><div class="main-t"><b>${esc(limpaNome(a.desc))}</b><span>${x ? ph(x.quem, 'sm') + esc(rotuloCartao(x)) : ''} · cobra por volta do dia ${dia}${a.cancelada ? ` · cancelada em ${fdc(parse(a.cancelada))}` : ''}</span></div><div class="val num">${brl(+a.valor)}<span class="muted" style="font-weight:500">/mês</span></div>${S.demo ? '' : a.cancelada ? `<button class="chip-btn" type="button" data-subvolta="${a.id}">Reativar</button>` : `<button class="chip-btn" type="button" data-subcancela="${a.id}">Cancelei</button>`}</div>` }
+  const linha = (a) => { const x = cs.find((k) => k.id === a.cartao); const dia = parse(a.data).getDate(); return `<div class="li"><div class="sub-ic" style="background:${corSub(a.desc)}">${esc(limpaNome(a.desc).charAt(0).toUpperCase() || '•')}</div><div class="main-t"><b>${esc(limpaNome(a.desc))}${a.origem === 'pluggy-detectada' ? ' <span class="pill lime" style="font-size:10px;vertical-align:2px">detectada no cartão</span>' : ''}</b><span>${x ? ph(x.quem, 'sm') + esc(rotuloCartao(x)) : ''} · ${a.meses ? `${a.meses} meses seguidos` : `cobra por volta do dia ${dia}`}${a.cancelada ? ` · cancelada em ${fdc(parse(a.cancelada))}` : ''}</span></div><div class="val num">${brl(+a.valor)}<span class="muted" style="font-weight:500">/mês</span></div>${S.demo ? '' : a.cancelada ? `<button class="chip-btn" type="button" data-subvolta="${a.id}">Reativar</button>` : `<button class="chip-btn" type="button" data-subcancela="${a.id}">Cancelei</button>${a.origem === 'pluggy-detectada' ? `<button class="btn btn-sm btn-ghost" type="button" data-subnao="${a.id}" title="Não é assinatura">Não é</button>` : ''}`}</div>` }
   return `<section class="card" id="assinaturas"><div class="card-h"><h3><span class="hi"><i data-lucide="repeat"></i></span>Assinaturas</h3><small>${ativas.length} ativas nos cartões</small></div>
     <div class="card-b subs">
       <div>
@@ -1357,7 +1358,7 @@ function vAssinaturas(c) {
           <label class="fld">Categoria<select id="sbCat">${Object.entries(CATS).map(([id, k]) => `<option value="${id}" ${id === 'lazer' ? 'selected' : ''}>${k[0]}</option>`).join('')}</select></label>
           <div class="fld" style="grid-column:span 2"><button class="btn btn-primary" type="submit" style="justify-content:center"><i data-lucide="plus"></i>Adicionar assinatura</button></div>
         </form>
-        <p class="note" style="margin:0">Assinaturas entram em todas as faturas do cartão e já saem do valor livre do mês. Ao marcar "Cancelei", ela deixa de entrar a partir da próxima fatura.</p>
+        <p class="note" style="margin:0">O app encontra sozinho as cobranças que se repetem todo mês no cartão do Nubank. Assinaturas entram em todas as faturas do cartão e já saem do valor livre do mês. Ao marcar "Cancelei", ela deixa de entrar a partir da próxima fatura.</p>
       </div>
     </div></section>`
 }
@@ -1370,6 +1371,12 @@ function bindAssinaturas(c) {
   document.querySelectorAll('[data-subsug]').forEach((b) => b.addEventListener('click', () => { const g = sug[+b.dataset.subsug]; salva(nova(g.desc, g.valor, g.cartao, g.data)) }))
   const muda = async (id, campo) => { const cp = S.compras.find((k) => k.id === id); if (!cp) return; if (!db) { cp.cancelada = campo; return render() } try { await db.doc('compras/' + id).update({ cancelada: campo || { __delete__: true } }); toast(campo ? 'Marcada como cancelada.' : 'Reativada.') } catch { toast('Não salvou.') } }
   document.querySelectorAll('[data-subcancela]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Confirmar?'; return } muda(b.dataset.subcancela, iso(c.t)) }))
+  document.querySelectorAll('[data-subnao]').forEach((b) => b.addEventListener('click', async () => {
+    if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Remover?'; return }
+    const id = b.dataset.subnao
+    if (!db) { S.compras = S.compras.filter((k) => k.id !== id); return render() }
+    try { await db.doc('assinaturas_ignoradas/' + id).set({ em: new Date().toISOString() }); await db.doc('compras/' + id).delete(); toast('Removida. Não será detectada de novo.') } catch { toast('Não removeu.') }
+  }))
   document.querySelectorAll('[data-subvolta]').forEach((b) => b.addEventListener('click', () => muda(b.dataset.subvolta, null)))
 }
 
