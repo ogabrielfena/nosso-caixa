@@ -379,6 +379,11 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .mon span{font-size:11px}
 .ev.dizimo{background:#f3e8ff;color:#6b21a8}
 .ev.google{background:#e3f0ff;color:#174ea6;border-left:3px solid #4285f4}
+.ical{margin-top:14px;padding:16px;border-radius:var(--r-md);background:var(--surface-2);display:flex;flex-direction:column;gap:12px}
+.ical .passo{display:flex;gap:12px}
+.ical .passo > div > span{display:block;font-size:13px;color:var(--ink-3);margin-top:2px}
+.ical .nro{width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--on-lime);display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+.link-ics{display:block;margin-top:8px;font-size:11px;word-break:break-all;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px;user-select:all}
 :root[data-theme="dark"] .ev.dizimo{background:#2a1840;color:#d8b4fe}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ev.dizimo{background:#2a1840;color:#d8b4fe}}
 @media (max-width:720px){.months{grid-template-columns:repeat(3,minmax(0,1fr))}.tithe .v{font-size:40px}}
@@ -1557,9 +1562,16 @@ function googleCard() {
   const eu = window.claudeUser?.pessoa?.()
   const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
   const linha = (p) => { const a = (S.agendaG || {})[p]; const ok = a?.conectado
-    return `<div class="li">${ph(p, 'md')}<div class="main-t"><b>Google Agenda ${p === 'gabriel' ? 'do Gabriel' : 'da Tainara'}</b><span>${ok ? `${esc(a.email || '')} · ${(a.itens || []).length} compromissos lidos · atualizado ${quando(a.atualizado)}` : p === 'tainara' ? 'A conta da Tainara é Gmail: a conexão dela vai pelo link secreto da agenda (próxima etapa).' : 'Ainda não conectado.'}</span></div>${ok ? `<span class="pill ok">conectado</span>${p === eu ? `<button class="btn btn-sm btn-ghost" type="button" data-gdesc="1">Desconectar</button>` : ''}` : p === eu && p !== 'tainara' && window.nossoCaixa ? `<button class="btn btn-primary btn-sm" type="button" data-gcon="1"><i data-lucide="link"></i>Conectar</button>` : ''}</div>` }
+    return `<div class="li">${ph(p, 'md')}<div class="main-t"><b>Google Agenda ${p === 'gabriel' ? 'do Gabriel' : 'da Tainara'}</b><span>${ok ? `${esc(a.email || '')} · ${(a.itens || []).length} compromissos lidos · atualizado ${quando(a.atualizado)}` : p === 'tainara' ? 'Conecta pelo link secreto do Google (conta Gmail). A Tainara faz isso logada no app dela.' : 'Ainda não conectado.'}</span></div>${ok ? `<span class="pill ok">conectado</span>${p === eu ? `<button class="btn btn-sm btn-ghost" type="button" ${a.fonte === 'ical' ? 'data-icalrem' : 'data-gdesc'}="1">Desconectar</button>` : ''}` : p === eu && p !== 'tainara' && window.nossoCaixa ? `<button class="btn btn-primary btn-sm" type="button" data-gcon="1"><i data-lucide="link"></i>Conectar</button>` : ''}</div>` }
+  const passosIcal = eu === 'tainara' && window.nossoCaixa ? `<div class="ical">
+      <b>Conectar o seu Google Agenda (2 passos, no computador)</b>
+      <div class="passo"><span class="nro">1</span><div><b>Ver as contas da casa no seu Google</b><span>Copie o seu link e, no <b>calendar.google.com</b>, vá em <b>Outras agendas › + › Do URL</b> e cole. Aparece uma agenda "Nosso Caixa" com contas, cartões, salário e dízimo.</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-sm" type="button" data-icslink="1"><i data-lucide="copy"></i>Copiar meu link</button></div><code id="icsTxt" class="link-ics" hidden></code></div></div>
+      <div class="passo"><span class="nro">2</span><div><b>Ver os seus compromissos aqui</b><span>No Google Agenda (computador): <b>Configurações › sua agenda › Integrar agenda › Endereço secreto no formato iCal</b>. Copie e cole aqui:</span>
+        <form id="fIcal" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="icalUrl" name="icalUrl" autocomplete="off" inputmode="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" style="flex:1;min-width:220px;height:40px;border:1.5px solid var(--line);border-radius:12px;padding:0 12px;background:var(--surface)"><button class="btn btn-primary btn-sm" type="submit">Salvar</button></form></div></div>
+    </div>` : ''
   return `<section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="calendar-sync"></i></span>Google Agenda</h3>${conectadoG() && window.nossoCaixa ? `<button class="btn btn-sm" type="button" data-gsync="1"><i data-lucide="refresh-cw"></i>Sincronizar</button>` : ''}</div>
-    <div class="card-b"><div class="list">${linha('gabriel')}${linha('tainara')}</div>
+    <div class="card-b"><div class="list">${linha('gabriel')}${linha('tainara')}</div>${passosIcal}
     <p class="note" style="margin:10px 0 0">Quem conecta ganha no Google uma agenda "Nosso Caixa" com as contas, o salário, o dízimo e o lembrete de investir, todo mês, com aviso na véspera. Os compromissos de vocês aparecem aqui no calendário. Atualiza sozinho a cada hora.</p>
     ${conectadoG() ? '' : `<div class="gcal" style="margin-top:12px"><div class="gmark"><i data-lucide="download"></i></div><div class="main-t"><b>Sem conectar</b><span>Baixe um arquivo com todas as contas e importe no Google Agenda (Configurações › Importar).</span></div><button class="btn btn-sm" type="button" id="icsBtn"><i data-lucide="download"></i>Baixar agenda</button></div>`}
     </div></section>`
@@ -1570,6 +1582,9 @@ async function gCall(acao) {
   return data
 }
 after.agenda = () => {
+  document.querySelector('[data-icslink]')?.addEventListener('click', async () => { try { const { url } = await gCall('link_ics'); const el = document.getElementById('icsTxt'); el.textContent = url; el.hidden = false; try { await navigator.clipboard.writeText(url); toast('Link copiado. Cole no Google Agenda em "Do URL".') } catch { toast('Copie o link abaixo.') } } catch (e) { toast(e.message) } })
+  document.getElementById('fIcal')?.addEventListener('submit', async (e) => { e.preventDefault(); const b = e.target.querySelector('button'); b.disabled = true; b.textContent = 'Lendo a agenda…'; try { const { data, error } = await window.sb.functions.invoke('gcal', { body: { acao: 'salvar_ical', url: document.getElementById('icalUrl').value } }); if (error) { const ctx = await error.context?.json?.().catch(() => null); throw new Error(ctx?.message || error.message) } toast(`Agenda conectada: ${data.compromissos} compromissos.`) } catch (err) { toast(err.message) } b.disabled = false; b.textContent = 'Salvar' })
+  document.querySelector('[data-icalrem]')?.addEventListener('click', async (e) => { const b = e.currentTarget; if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Desconectar mesmo?'; return } try { await gCall('remover_ical'); toast('Agenda desconectada.') } catch (err) { toast(err.message) } })
   document.querySelector('[data-gcon]')?.addEventListener('click', async () => { try { location.href = (await gCall('conectar')).url } catch (e) { toast(e.message) } })
   document.querySelector('[data-gsync]')?.addEventListener('click', async (e) => { e.currentTarget.disabled = true; try { await gCall('sincronizar'); toast('Agenda sincronizada.') } catch (err) { toast(err.message) } render() })
   document.querySelector('[data-gdesc]')?.addEventListener('click', async (e) => { const b = e.currentTarget; if (b.dataset.c !== '1') { b.dataset.c = '1'; b.textContent = 'Desconectar mesmo?'; return } try { await gCall('desconectar'); toast('Google Agenda desconectado.') } catch (err) { toast(err.message) } })
