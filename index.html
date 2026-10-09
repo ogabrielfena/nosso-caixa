@@ -1131,8 +1131,50 @@ function vAssistente(c) {
         ${[['Todo dia', '09:00', 'Bom dia em texto e áudio: quanto dá pra gastar hoje e as contas que vencem no dia'], ['Todo dia', '21:00', 'Boa noite em texto e áudio: gastos do dia e saldo do limite e das contas'], ['Sempre', 'na hora', 'Responde toda mensagem do grupo: texto, áudio (responde em áudio), foto ou PDF de comprovante'], ['A cada 2 h', 'auto', 'Busca no banco os gastos do débito, Pix e cartão que o Meu Pluggy já recebeu']].map(([q, h, t]) => `<div class="li"><span class="tm">${h}</span><div class="main-t"><b style="white-space:normal">${t}</b><span>${q}</span></div></div>`).join('')}
       </div></div></section>
   </div>
+  ${notifCard()}
   ${bancosCard()}`
 }
+// ── Notificações no celular (Web Push). No iPhone só funciona com o app na Tela de Início (iOS 16.4+). ──
+const VAPID_PUB = 'BOz3SaoAJBPQ-EIb2az77O_yind_mNWH4W8xaw6cbAgjADANiG7gWSyUH9J7s2JNNH3EvMkReDySw-JQDnmvvCk'
+const NT = { estado: null }
+const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
+const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+const b64u = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)) }
+async function estadoNotif() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return ehIOS() && !instalado() ? 'instalar' : 'sem-suporte'
+  if (Notification.permission === 'denied') return 'negado'
+  const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription()
+  return sub ? 'ativo' : 'desligado'
+}
+function notifCard() {
+  if (NT.estado === null) { estadoNotif().then((e) => { NT.estado = e; render() }).catch(() => { NT.estado = 'sem-suporte'; render() }) }
+  const e = NT.estado
+  const txt = { ativo: 'Ligadas neste celular. Avisos de contas vencendo, limite do dia e gastos novos do banco.', desligado: 'Receba no celular: conta vencendo, limite do dia estourado e gasto novo do banco para classificar.', negado: 'O celular bloqueou as notificações deste app. Libere em Ajustes do celular › Notificações › Nosso Caixa e volte aqui.', instalar: 'No iPhone, as notificações só funcionam com o app na Tela de Início: no Safari, toque em Compartilhar › Adicionar à Tela de Início e abra por lá.', 'sem-suporte': 'Este navegador não recebe notificações. Abra o app instalado na tela de início do celular.' }[e] || 'Verificando…'
+  return `<section class="card"><div class="card-h"><h3><span class="hi"><i data-lucide="bell-ring"></i></span>Notificações</h3>${e === 'ativo' ? '<span class="pill ok">ligadas</span>' : ''}</div>
+    <div class="card-b"><p class="note" style="margin:0 0 12px">${txt}</p>
+    ${e === 'desligado' ? '<button class="btn btn-primary btn-sm" type="button" id="ntOn"><i data-lucide="bell"></i>Ativar notificações</button>' : ''}
+    ${e === 'ativo' ? '<button class="btn btn-sm btn-ghost" type="button" id="ntOff">Desligar neste celular</button>' : ''}
+    </div></section>`
+}
+async function ligaNotif() {
+  try {
+    const perm = await Notification.requestPermission()
+    if (perm !== 'granted') { NT.estado = perm === 'denied' ? 'negado' : 'desligado'; return render() }
+    const reg = await navigator.serviceWorker.ready
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUB) })
+    const j = sub.toJSON(), id = 'sub-' + Array.from(new TextEncoder().encode(j.endpoint)).reduce((h, c) => (h * 31 + c) >>> 0, 7).toString(36)
+    if (db) await db.doc('push_subs/' + id).set({ endpoint: j.endpoint, keys: j.keys, quem: window.claudeUser?.pessoa?.() || null, aparelho: ehIOS() ? 'iPhone' : /android/i.test(navigator.userAgent) ? 'Android' : 'computador', em: new Date().toISOString() })
+    NT.estado = 'ativo'; toast('Notificações ligadas neste celular.'); render()
+  } catch (err) { toast('Não ligou: ' + (err.message || err)); }
+}
+async function desligaNotif() {
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription()
+    if (sub) { const j = sub.toJSON(), id = 'sub-' + Array.from(new TextEncoder().encode(j.endpoint)).reduce((h, c) => (h * 31 + c) >>> 0, 7).toString(36); await sub.unsubscribe(); if (db) await db.doc('push_subs/' + id).delete() }
+    NT.estado = 'desligado'; toast('Notificações desligadas neste celular.'); render()
+  } catch { toast('Não desligou. Tente de novo.') }
+}
+document.addEventListener('click', (e) => { if (e.target.closest?.('#ntOn')) ligaNotif(); else if (e.target.closest?.('#ntOff')) desligaNotif() })
 // ── Bancos: Meu Pluggy (grátis) ─────────────────────────────────────────────
 function bancosCard() {
   const itens = Object.entries(S.pluggy || {})
