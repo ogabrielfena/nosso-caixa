@@ -604,6 +604,8 @@ select.fin.on{background:var(--lime-soft);border-color:var(--forest-2);color:var
 .li.mov .main-t > span .pill{flex:none;width:auto}
 .mov-ctl{grid-area:ctl;display:flex;gap:8px;min-width:0}
 .mov-ctl select.fin{flex:1 1 0;min-width:0;max-width:none}
+.mov-ctl .del{flex:none;min-width:40px;height:32px;padding:0 10px;color:var(--ink-2)}
+.mov-ctl .del[data-confirm="1"]{color:var(--bad);font-weight:700}
 @media (max-width: 720px){
   .li.mov{grid-template-areas:"ph main val" "ctl ctl ctl"}
   .mov-ctl select.fin{padding:0 24px 0 12px}
@@ -946,7 +948,7 @@ function movLi(x) {
   return `<div class="li mov"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div>
     <div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${quando} · ${esc(String(x.conta || '').replace(/^Conta /, ''))}${banco}</span></div>
     <div class="val num neg">−${brl(+x.valor)}</div>
-    ${S.demo ? '' : `<div class="mov-ctl">${selCat(x)}${selFin('gasto', `data-fin-gasto="${x.id}"`, x.desc)}</div>`}</div>`
+    ${S.demo ? '' : `<div class="mov-ctl">${selCat(x)}${selFin('gasto', `data-fin-gasto="${x.id}"`, x.desc)}<button class="btn btn-sm btn-ghost del" type="button" data-del="${x.id}" aria-label="Excluir gasto ${esc(x.desc || '')}" title="Excluir gasto"><i data-lucide="trash-2"></i></button></div>`}</div>`
 }
 after.hoje = () => { document.getElementById('goGasto')?.addEventListener('click', openGasto) }
 
@@ -982,6 +984,11 @@ function bindGasto() {
     const valor = numBR(document.getElementById('gValor').value)
     if (!(valor > 0)) return toast('Informe um valor maior que zero.')
     const g = { data: document.getElementById('gData').value || iso(hoje()), desc: document.getElementById('gDesc').value.trim(), cat: document.getElementById('gCat').value, quem: document.querySelector('input[name=gQuem]:checked')?.value || 'gabriel', ...pagouCom(document.getElementById('gConta').value), valor, ts: new Date().toISOString(), por: S.meId || null, origem: 'pagina' }
+    // filtro de duplicado: mesmo valor e mesma pessoa em até 2 dias pede confirmação (2º toque lança)
+    const dup = S.gastos.find((x) => x.quem === g.quem && Math.abs(+x.valor - valor) < 0.02 && pertoDias(x.data, g.data))
+    const chave = `${g.quem}|${valor}|${g.data}`
+    if (dup && f.dataset.dupOk !== chave) { f.dataset.dupOk = chave; return toast(`Já tem "${dup.desc || 'gasto'}" de ${brl(+dup.valor)} (${PESSOAS[dup.quem] || ''}). Se for outro, toque em Lançar de novo.`) }
+    f.dataset.dupOk = ''
     if (!db) { S.gastos.push({ id: 'local' + Date.now(), ...g }); closeGasto(); toast('Lançado só nesta prévia. Abra logado para salvar.'); return render() }
     try { await db.collection('gastos').add(g); closeGasto(); toast('Gasto lançado.') } catch (err) { toast(err?.code === 'not_granted' ? 'Você não tem permissão para lançar aqui.' : 'Não salvou. Tente de novo.') }
   })
