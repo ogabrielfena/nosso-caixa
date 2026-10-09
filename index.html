@@ -1137,6 +1137,19 @@ function vAssistente(c) {
   ${notifCard()}
   ${bancosCard()}`
 }
+// ── Sons no app aberto: moeda quando entra gasto, aviso (tipo e-mail) quando chega lembrete. Feitos na hora com Web Audio.
+// O som da notificação com o app fechado é o padrão do celular: o iPhone não deixa um app da web escolher.
+const SOM = { ctx: null, ligado: (() => { try { return localStorage.getItem('nc-som') !== '0' } catch { return true } })() }
+const destravaSom = () => { try { SOM.ctx = SOM.ctx || new (window.AudioContext || window.webkitAudioContext)(); SOM.ctx.resume() } catch {} }
+addEventListener('pointerdown', destravaSom, { passive: true })
+function som(tipo) {
+  if (!SOM.ligado || !SOM.ctx || SOM.ctx.state !== 'running') return
+  const c = SOM.ctx, t0 = c.currentTime
+  const nota = (freq, ini, dur, forma, vol) => { const o = c.createOscillator(), g = c.createGain(); o.type = forma; o.frequency.setValueAtTime(freq, t0 + ini); g.gain.setValueAtTime(0.0001, t0 + ini); g.gain.exponentialRampToValueAtTime(vol, t0 + ini + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur); o.connect(g).connect(c.destination); o.start(t0 + ini); o.stop(t0 + ini + dur + 0.02) }
+  if (tipo === 'moeda') { nota(988, 0, 0.09, 'square', 0.12); nota(1319, 0.08, 0.38, 'square', 0.12) }
+  else { nota(784, 0, 0.35, 'sine', 0.22); nota(1047, 0.16, 0.5, 'sine', 0.18) }
+}
+navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.nc === 'push') som(e.data.tipo === 'gasto' ? 'moeda' : 'aviso') })
 // ── Notificações no celular (Web Push). No iPhone só funciona com o app na Tela de Início (iOS 16.4+). ──
 const VAPID_PUB = 'BOz3SaoAJBPQ-EIb2az77O_yind_mNWH4W8xaw6cbAgjADANiG7gWSyUH9J7s2JNNH3EvMkReDySw-JQDnmvvCk'
 const NT = { estado: null }
@@ -1157,6 +1170,8 @@ function notifCard() {
     <div class="card-b"><p class="note" style="margin:0 0 12px">${txt}</p>
     ${e === 'desligado' ? '<button class="btn btn-primary btn-sm" type="button" id="ntOn"><i data-lucide="bell"></i>Ativar notificações</button>' : ''}
     ${e === 'ativo' ? '<button class="btn btn-sm btn-ghost" type="button" id="ntOff">Desligar neste celular</button>' : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><b style="font-size:14px;flex:1;min-width:160px">Sons com o app aberto</b><button class="chip-btn ${SOM.ligado ? 'on' : ''}" type="button" id="somTg">${SOM.ligado ? 'Ligados' : 'Desligados'}</button><button class="btn btn-sm btn-ghost" type="button" data-som="moeda">🪙 Gasto</button><button class="btn btn-sm btn-ghost" type="button" data-som="aviso">✉️ Lembrete</button></div>
+    <p class="note" style="margin:8px 0 0">Com o app fechado, a notificação toca o som padrão do celular.</p>
     </div></section>`
 }
 async function ligaNotif() {
@@ -1177,7 +1192,11 @@ async function desligaNotif() {
     NT.estado = 'desligado'; toast('Notificações desligadas neste celular.'); render()
   } catch { toast('Não desligou. Tente de novo.') }
 }
-document.addEventListener('click', (e) => { if (e.target.closest?.('#ntOn')) ligaNotif(); else if (e.target.closest?.('#ntOff')) desligaNotif() })
+document.addEventListener('click', (e) => {
+  if (e.target.closest?.('#ntOn')) ligaNotif(); else if (e.target.closest?.('#ntOff')) desligaNotif()
+  else if (e.target.closest?.('#somTg')) { SOM.ligado = !SOM.ligado; try { localStorage.setItem('nc-som', SOM.ligado ? '1' : '0') } catch {} render(); if (SOM.ligado) { destravaSom(); setTimeout(() => som('moeda'), 60) } }
+  else { const b = e.target.closest?.('[data-som]'); if (b) { destravaSom(); setTimeout(() => som(b.dataset.som), 60) } }
+})
 // ── Bancos: Meu Pluggy (grátis) ─────────────────────────────────────────────
 function bancosCard() {
   const itens = Object.entries(S.pluggy || {})
@@ -1924,7 +1943,7 @@ route()
   const rerender = () => { const a = document.activeElement; if (!(a && /^(INPUT|SELECT)$/.test(a.tagName) && a.closest('form'))) render() }
   db.doc('config/main').onSnapshot((s) => { if (s.exists) S.cfg = { ...structuredClone(BASE), ...s.data() }; rerender() }, () => {})
   db.collection('contas').onSnapshot((q) => { if (!q.empty) S.contas = q.docs.map((d) => ({ ...(BASE_CONTAS.find((b) => b.id === d.id) || {}), id: d.id, ...d.data() })); rerender() }, () => {})
-  db.collection('gastos').onSnapshot((q) => { S.gastos = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
+  db.collection('gastos').onSnapshot((q) => { const antes = S.gastosVistos; S.gastos = q.docs.map((d) => ({ id: d.id, ...d.data() })); S.gastosVistos = new Set(S.gastos.map((g) => g.id)); if (antes && S.gastos.some((g) => !antes.has(g.id))) som('moeda'); rerender() }, () => {})
   db.collection('aportes').onSnapshot((q) => { S.aportes = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('agenda_eventos').onSnapshot((q) => { S.agendaG = {}; q.docs.forEach((d) => { S.agendaG[d.id] = d.data() }); rerender() }, () => {})
   db.collection('extrato').onSnapshot((q) => { S.extrato = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
