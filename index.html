@@ -567,6 +567,32 @@ details.itens summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--
   .glist .li > .pill,.glist .li > .btn{margin-left:56px}
   .cal button.d{min-height:46px}
 }
+
+/* finalidade do lançamento */
+select.fin{height:32px;max-width:150px;border:1.5px solid var(--line);border-radius:999px;padding:0 26px 0 10px;background:var(--surface);color:var(--ink-2);font:600 12px/1 inherit;cursor:pointer;text-overflow:ellipsis}
+select.fin.on{background:var(--lime-soft);border-color:var(--forest-2);color:var(--lime-ink)}
+@media (max-width: 720px){
+  .li:has(> select.fin){flex-wrap:wrap}
+  .li > select.fin{order:5;margin-left:52px;max-width:none;flex:1}
+  .t select.fin{max-width:120px}
+}
+
+@media (max-width: 720px){
+  /* extrato vira lista: descrição e valor em cima, data/forma/conta embaixo, finalidade por último */
+  .tbl:has(.ext-t){overflow:visible}
+  .ext-t,.ext-t tbody{display:block;width:100%}
+  .ext-t thead{display:none}
+  .ext-t tr{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"desc desc desc val" "data forma conta conta" "fin fin fin fin";column-gap:8px;row-gap:4px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+  .ext-t td{padding:0!important;border:0!important;max-width:none!important}
+  .ext-t td:nth-child(1){grid-area:data;font-size:12px;color:var(--ink-3)}
+  .ext-t td:nth-child(2){grid-area:desc;white-space:normal!important;font-weight:600;font-size:14px;overflow:visible}
+  .ext-t td:nth-child(3){grid-area:forma}
+  .ext-t td:nth-child(4){grid-area:conta;font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis}
+  .ext-t td:nth-child(5){grid-area:fin}
+  .ext-t td:nth-child(5):empty{display:none}
+  .ext-t td:nth-child(6){grid-area:val;font-weight:700;white-space:nowrap}
+  .ext-t select.fin{max-width:none;width:100%}
+}
 </style>
 
 <button class="skip" type="button" onclick="const m=document.getElementById('page');m.focus();m.scrollIntoView()">Pular para o conteúdo</button>
@@ -631,7 +657,7 @@ function exemploGastos() {
   return out
 }
 
-const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, extrato: [], agendaG: {}, live: false, demo: true, view: 'hoje', meId: null }
+const S = { cfg: structuredClone(BASE), contas: BASE_CONTAS.map((c) => ({ ...c })), gastos: [], aportes: [], pagos: {}, pagDocs: {}, regras: {}, faturas: {}, compras: [], entradas: [], dizimos: [], pluggy: {}, extrato: [], agendaG: {}, live: false, demo: true, view: 'hoje', meId: null }
 let db = null, sample = null
 
 const CATS = { mercado: ['Mercado', 'shopping-cart'], restaurante: ['Restaurante', 'utensils'], transporte: ['Transporte', 'car'], casa: ['Casa', 'home'], saude: ['Saúde', 'heart-pulse'], lazer: ['Lazer', 'ticket'], compras: ['Compras', 'shopping-bag'], outros: ['Outros', 'circle-dot'] }
@@ -828,6 +854,56 @@ function vHoje(c) {
 const FORMAS = { credito: ['crédito', 'credit-card'], debito: ['débito', 'wallet'], pix: ['Pix', 'zap'], boleto: ['boleto', 'barcode'], conta_consumo: ['conta de consumo', 'receipt'], emprestimo: ['empréstimo', 'landmark'], transferencia: ['transferência', 'arrow-left-right'], dinheiro: ['dinheiro', 'banknote'], entrada: ['entrada', 'arrow-down-left'], estorno: ['estorno', 'undo-2'], outros: ['outros', 'circle-dot'] }
 const formaDe = (g) => g.forma || (g.cartao ? 'credito' : /dinheiro/i.test(g.conta || '') ? 'dinheiro' : /pix/i.test(g.conta || '') ? 'pix' : 'debito')
 const pillForma = (f) => `<span class="pill fm-${f}">${(FORMAS[f] || FORMAS.outros)[0]}</span>`
+// ── Finalidade de cada saída: gasto do dia, conta fixa, fatura, transferência… (a escolha vira regra para o mesmo destinatário)
+// A mesma normalização existe no banco (public.nc_norm), que aplica as regras na sincronização do Pluggy.
+const chaveDe = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^(pix enviado para|transferencia enviada pelo pix|pagamento de boleto efetuado|compra no debito)[ -]*/, '').replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 40).replace(/\s\d[\d ]*$/, '').trim()
+const CHAVE_GENERICA = /^(debito em conta|pagamento de fatura|pix enviado|transferencia enviada|compra|pagamento)$/
+const rotuloFin = (fin) => { if (fin?.startsWith('fixa:')) { const x = S.contas.find((k) => k.id === fin.slice(5)); return x ? (x.tipo === 'cartao' ? 'pagou fatura do ' : 'pagou ') + x.nome : 'conta fixa' } return { gasto: 'gasto do dia', transferencia: 'transferência entre vocês', dizimo: 'dízimo e oferta', investimento: 'investimento' }[fin] || 'não conta no limite' }
+function finDeExt(e) {
+  if (!e) return 'gasto'
+  if (e.finalidade) return e.finalidade
+  if (e.destino === 'gasto do dia' || e.destino === 'já lançado à mão') return 'gasto'
+  const m = /^pagou (.+)$/.exec(e.destino || ''); if (m) { const x = S.contas.find((k) => k.nome === m[1] || 'fatura do ' + k.nome === m[1]); if (x) return 'fixa:' + x.id }
+  return null
+}
+function selFin(atual, attr, desc) {
+  const fixas = S.contas.filter((x) => x.tipo !== 'cartao'), cartoes = S.contas.filter((x) => x.tipo === 'cartao')
+  const op = (v, t) => `<option value="${v}" ${atual === v ? 'selected' : ''}>${esc(t)}</option>`
+  return `<select class="fin ${atual === 'gasto' ? '' : 'on'}" ${attr} aria-label="Finalidade de ${esc(desc || 'lançamento')}">${op('gasto', 'Gasto do dia')}<optgroup label="Conta fixa">${fixas.map((x) => op('fixa:' + x.id, x.nome)).join('')}</optgroup><optgroup label="Fatura de cartão">${cartoes.map((x) => op('fixa:' + x.id, 'Fatura · ' + x.nome)).join('')}</optgroup><optgroup label="Fora do limite">${op('transferencia', 'Transferência entre vocês')}${op('dizimo', 'Dízimo e oferta')}${op('investimento', 'Investimento')}${op('ignorar', 'Não contar')}</optgroup></select>`
+}
+const pertoDias = (a, b) => Math.abs((+parse(a) - +parse(b)) / 864e5) <= 2
+async function ajustaPag(fin, data, delta, desc) {
+  if (!fin?.startsWith('fixa:')) return
+  const id = `${data.slice(0, 7)}_${fin.slice(5)}`, cur = S.pagDocs[id]
+  const base = cur ? (cur.valorPago ?? (cur.via ? +cur.valor || 0 : 0)) : 0, novo = Math.round((base + delta) * 100) / 100
+  if (novo <= 0.01 && cur && (cur.via === 'finalidade' || cur.via === 'regra')) return db.doc('pagamentos/' + id).delete()
+  await db.doc('pagamentos/' + id).set({ ...(cur || {}), pago: true, valorPago: Math.max(0, novo), via: cur?.via || 'finalidade', em: new Date().toISOString(), ...(desc ? { desc } : {}) })
+}
+async function classificar(fin, ext, g) {
+  if (!db) return toast('Faça login para classificar.')
+  const ref = ext || g, valor = ext ? Math.abs(+ext.valor) : +g.valor, quem = ref.quem
+  g = g || S.gastos.find((x) => x.quem === quem && Math.abs(+x.valor - valor) < 0.02 && pertoDias(x.data, ref.data))
+  ext = ext || S.extrato.find((x) => x.quem === quem && Math.abs(-x.valor - valor) < 0.02 && pertoDias(x.data, ref.data))
+  const antes = ext ? finDeExt(ext) : 'gasto', desc = ref.desc || ''
+  try {
+    if (antes !== fin) await ajustaPag(antes, ref.data, -valor)
+    if (fin === 'gasto') { if (!g) await db.collection('gastos').add({ data: ref.data, desc, quem, conta: ext?.conta || '', forma: ext?.meio || 'pix', valor, cat: 'outros', origem: 'extrato', ts: new Date().toISOString() }) }
+    else { if (g) await db.doc('gastos/' + g.id).delete(); if (antes !== fin) await ajustaPag(fin, ref.data, valor, desc) }
+    // o extrato guarda a escolha (e permite desfazer); gasto lançado à mão ganha uma linha de extrato para não sumir
+    if (ext) await db.doc('extrato/' + ext.id).update({ finalidade: fin, destino: rotuloFin(fin) })
+    else await db.doc('extrato/man-' + g.id).set({ data: g.data, desc, valor: -valor, meio: formaDe(g), quem, conta: g.conta || '', banco: '', finalidade: fin, destino: rotuloFin(fin) })
+    const chave = chaveDe(desc), lembra = chave.length >= 4 && !CHAVE_GENERICA.test(chave)
+    const rid = chave.replace(/\s+/g, '-')
+    if (lembra && fin !== 'gasto') await db.doc('regras/' + rid).set({ chave, fin, nome: desc.slice(0, 80), em: new Date().toISOString() })
+    if (lembra && fin === 'gasto' && S.regras[rid]) await db.doc('regras/' + rid).delete()
+    toast(fin === 'gasto' ? 'Voltou a contar como gasto do dia.' : `${rotuloFin(fin).replace(/^./, (x) => x.toUpperCase())}.${lembra ? ' Os próximos para o mesmo destino já entram assim.' : ''}`)
+  } catch { toast('Não salvou. Tente de novo.') }
+}
+document.addEventListener('change', (e) => {
+  const s = e.target.closest?.('select.fin'); if (!s) return
+  if (s.dataset.finExt) classificar(s.value, S.extrato.find((x) => x.id === s.dataset.finExt), null)
+  else if (s.dataset.finGasto) classificar(s.value, null, S.gastos.find((x) => x.id === s.dataset.finGasto))
+})
 const largo = () => matchMedia('(min-width: 721px)').matches
 const segPeriodo = (on) => `<div class="seg" role="group" aria-label="Período">${[['hoje', 'Hoje'], ['mes', 'Mês']].map(([id, t]) => `<a href="#${id}" style="text-decoration:none"><span ${on === id ? 'aria-pressed="true"' : ''}>${t}</span></a>`).join('')}</div>`
 function dizimoStatus(c) {
@@ -837,21 +913,21 @@ function dizimoStatus(c) {
 function movLi(x) {
   const d = parse(x.data), cat = CATS[x.cat] || CATS.outros, hojeIso = iso(hoje())
   const quando = x.data === hojeIso ? 'Hoje' : x.data === iso(new Date(hoje().getTime() - 864e5)) ? 'Ontem' : `${d.getDate()} ${MES[d.getMonth()]}`
-  return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${quando} · ${esc(x.conta || '')}${x.origem === 'pluggy' ? ' · <i data-lucide="landmark" style="width:11px;height:11px"></i> banco' : ''}</span></div><div class="val num neg">−${brl(+x.valor).replace('R$ ', 'R$ ')}</div></div>`
+  return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${quando} · ${esc(x.conta || '')}${x.origem === 'pluggy' ? ' · <i data-lucide="landmark" style="width:11px;height:11px"></i> banco' : ''}</span></div><div class="val num neg">−${brl(+x.valor).replace('R$ ', 'R$ ')}</div>${S.demo ? '' : selFin('gasto', `data-fin-gasto="${x.id}"`, x.desc)}</div>`
 }
 after.hoje = () => { document.getElementById('goGasto')?.addEventListener('click', openGasto) }
 
 function contaLi(x, c) {
   const soon = !x.pago && x.em <= 3
   return `<div class="li"><div class="date-chip ${soon || x.atrasada ? 'soon' : ''} ${x.pago ? 'paid' : ''}"><b>${x.quando.getDate()}</b><span>${MES[x.quando.getMonth()]}</span></div>
-  <div class="main-t"><b>${esc(x.nome)}</b><span>${ph(x.quem, 'sm')}${PESSOAS[x.quem] || ''} · ${x.pago ? 'paga' : x.atrasada ? 'venceu' : x.em === 0 ? 'vence hoje' : x.em === 1 ? 'vence amanhã' : `em ${x.em} dias`}</span></div>
+  <div class="main-t"><b>${esc(x.nome)}</b><span>${ph(x.quem, 'sm')}${PESSOAS[x.quem] || ''} · ${x.pago ? ((vp) => vp != null && vp < valorDe(x, mesKey(x.quando)) - 1 ? `pago ${brl(vp, false)} de ${brl(valorDe(x, mesKey(x.quando)), false)}` : 'paga')(S.pagDocs[`${mesKey(x.quando)}_${x.id}`]?.valorPago) : x.atrasada ? 'venceu' : x.em === 0 ? 'vence hoje' : x.em === 1 ? 'vence amanhã' : `em ${x.em} dias`}</span></div>
   <div class="val num">${brl(valorDe(x, mesKey(x.quando)), false)}${x.tipo === 'cartao' ? (faturaDe(x, mesKey(x.quando)) ? '<span class="pill lime" style="display:block;margin-top:3px;text-align:center">fatura real</span>' : `<a class="pill" style="display:block;margin-top:3px;text-align:center;text-decoration:none" href="#cartoes" data-anexar="${x.id}" data-mes="${mesKey(x.quando)}">anexar fatura</a>`) : ''}</div>
   ${x.quando.getMonth() === c.t.getMonth() ? `<button class="chip-btn ${x.pago ? 'on' : ''}" type="button" data-pagar="${x.id}">${x.pago ? '<i data-lucide="check"></i>Paga' : 'Marcar paga'}</button>` : ''}</div>`
 }
 function ultimos(n) {
   const g = [...S.gastos].sort((a, b) => (b.data + (b.ts || '')).localeCompare(a.data + (a.ts || ''))).slice(0, n)
   if (!g.length) return '<div class="note">Nenhum gasto lançado ainda. Use o formulário acima ou mande no grupo do WhatsApp.</div>'
-  return g.map((x) => { const d = parse(x.data); const cat = CATS[x.cat] || CATS.outros; return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${d.getDate()} ${MES[d.getMonth()]} · ${PESSOAS[x.quem] || ''} · ${esc(x.conta || '')}</span></div><div class="val num">${brl(+x.valor)}</div>${S.demo ? '' : `<button class="btn btn-sm btn-ghost" type="button" data-del="${x.id}" aria-label="Apagar gasto"><i data-lucide="trash-2"></i></button>`}</div>` }).join('')
+  return g.map((x) => { const d = parse(x.data); const cat = CATS[x.cat] || CATS.outros; return `<div class="li"><div class="ph-wrap">${ph(x.quem, 'md')}<span class="cat"><i data-lucide="${cat[1]}"></i></span></div><div class="main-t"><b>${esc(x.desc || cat[0])}</b><span>${pillForma(formaDe(x))} ${d.getDate()} ${MES[d.getMonth()]} · ${PESSOAS[x.quem] || ''} · ${esc(x.conta || '')}</span></div><div class="val num">${brl(+x.valor)}</div>${S.demo ? '' : `${selFin('gasto', `data-fin-gasto="${x.id}"`, x.desc)}<button class="btn btn-sm btn-ghost" type="button" data-del="${x.id}" aria-label="Apagar gasto"><i data-lucide="trash-2"></i></button>`}</div>` }).join('')
 }
 function formGasto() {
   return `<form class="form" id="fGasto">
@@ -943,7 +1019,7 @@ function vExtrato(c) {
         <div class="stat"><div class="k">Pix, boletos e contas</div><div class="v num">${brl(-soma((e) => ['pix', 'boleto', 'conta_consumo', 'transferencia', 'emprestimo', 'outros'].includes(e.meio) && e.valor < 0), false)}</div></div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${chips.map(([id, t]) => `<button class="chip-btn ${extFiltro === id ? 'on' : ''}" type="button" data-extf="${id}">${t} <span class="muted">${doMes.filter(F[id]).length}</span></button>`).join('')}</div>
-      ${lista.length ? `<div class="tbl"><table class="t num"><thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th>Conta</th><th>No app</th><th class="r">Valor</th></tr></thead><tbody>${lista.map((e) => `<tr><td>${fdc(parse(e.data))}</td><td class="desc" title="${esc(e.desc)}">${esc(e.desc)}${e.parcela ? ` <span class="muted">${esc(e.parcela)}</span>` : ''}${e.pendente ? ' <span class="pill" style="font-size:10px">na fatura aberta</span>' : ''}</td><td>${pillForma(e.meio)}</td><td style="white-space:nowrap">${ph(e.quem, 'sm')} ${esc(e.conta)}</td><td class="muted" style="font-size:12px">${esc(e.destino || '')}</td><td class="r ${e.valor > 0 ? 'ok' : ''}">${e.valor > 0 ? '+' : ''}${brl(e.valor)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="note">${S.extrato.length ? 'Nada neste filtro.' : 'O extrato aparece aqui quando um banco estiver conectado pelo Meu Pluggy (Ajustes › Bancos).'}</div>`}
+      ${lista.length ? `<div class="tbl"><table class="t num ext-t"><thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th>Conta</th><th>Finalidade</th><th class="r">Valor</th></tr></thead><tbody>${lista.map((e) => `<tr><td>${fdc(parse(e.data))}</td><td class="desc" title="${esc(e.desc)}">${esc(e.desc)}${e.parcela ? ` <span class="muted">${esc(e.parcela)}</span>` : ''}${e.pendente ? ' <span class="pill" style="font-size:10px">na fatura aberta</span>' : ''}</td><td>${pillForma(e.meio)}</td><td style="white-space:nowrap">${ph(e.quem, 'sm')} ${esc(e.conta)}</td><td>${(() => { const f = e.valor < 0 && !S.demo ? finDeExt(e) : null; return f ? selFin(f, `data-fin-ext="${e.id}"`, e.desc) : `<span class="muted" style="font-size:12px">${esc(e.destino || '')}</span>` })()}</td><td class="r ${e.valor > 0 ? 'ok' : ''}">${e.valor > 0 ? '+' : ''}${brl(e.valor)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="note">${S.extrato.length ? 'Nada neste filtro.' : 'O extrato aparece aqui quando um banco estiver conectado pelo Meu Pluggy (Ajustes › Bancos).'}</div>`}
     </div></section>`
 }
 after.mes = (c) => {
@@ -1783,7 +1859,8 @@ route()
   db.collection('entradas').onSnapshot((q) => { S.entradas = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('compras').onSnapshot((q) => { S.compras = q.docs.map((d) => ({ id: d.id, ...d.data() })); rerender() }, () => {})
   db.collection('faturas').onSnapshot((q) => { S.faturas = {}; q.docs.forEach((d) => { S.faturas[d.id] = d.data() }); rerender() }, () => {})
-  db.collection('pagamentos').onSnapshot((q) => { S.pagos = {}; q.docs.forEach((d) => { S.pagos[d.id] = true }); rerender() }, () => {})
+  db.collection('pagamentos').onSnapshot((q) => { S.pagos = {}; S.pagDocs = {}; q.docs.forEach((d) => { S.pagos[d.id] = true; S.pagDocs[d.id] = d.data() }); rerender() }, () => {})
+  db.collection('regras').onSnapshot((q) => { S.regras = {}; q.docs.forEach((d) => { S.regras[d.id] = d.data() }); rerender() }, () => {})
   render()
 })()
 </script>
