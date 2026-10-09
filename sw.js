@@ -1,7 +1,7 @@
-// Nosso Caixa · service worker
+// ateofin (Nosso Caixa) · service worker
 // Tela: rede primeiro (pega versão nova), cai no cache se estiver sem internet.
 // Arquivos estáticos (ícones, bibliotecas): cache primeiro. Dados do Supabase nunca passam pelo cache.
-const VERSAO = 'nc-1791512832'
+const VERSAO = 'nc-1791515433'
 const BASICO = ['/', '/index.html', '/supa.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(BASICO)).then(() => self.skipWaiting())) })
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSAO).map((k) => caches.delete(k)))).then(() => self.clients.claim())) })
@@ -24,7 +24,7 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {} } catch { d = { corpo: e.data && e.data.text() } }
   // com o app aberto, avisa a tela para tocar o som do tipo (moeda para gasto, aviso para lembrete)
   self.clients.matchAll({ type: 'window' }).then((ws) => ws.forEach((w) => w.postMessage({ nc: 'push', tipo: d.tipo || 'lembrete' })))
-  e.waitUntil(self.registration.showNotification(d.titulo || 'Nosso Caixa', {
+  e.waitUntil(self.registration.showNotification(d.titulo || 'ateofin', {
     body: d.corpo || '', icon: '/icon-192.png', badge: '/icon-192.png', tag: d.tag || undefined, data: { url: d.url || '/' },
   }))
 })
