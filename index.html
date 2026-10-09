@@ -867,6 +867,9 @@ function vHoje(c) {
 }
 const FORMAS = { credito: ['crédito', 'credit-card'], debito: ['débito', 'wallet'], pix: ['Pix', 'zap'], boleto: ['boleto', 'barcode'], conta_consumo: ['conta de consumo', 'receipt'], emprestimo: ['empréstimo', 'landmark'], transferencia: ['transferência', 'arrow-left-right'], dinheiro: ['dinheiro', 'banknote'], entrada: ['entrada', 'arrow-down-left'], estorno: ['estorno', 'undo-2'], outros: ['outros', 'circle-dot'] }
 const formaDe = (g) => g.forma || (g.cartao ? 'credito' : /dinheiro/i.test(g.conta || '') ? 'dinheiro' : /pix/i.test(g.conta || '') ? 'pix' : 'debito')
+// Número digitado: "3.487,93", "3487,93", "3487.93" e "3.487" são todos válidos.
+const numBR = (v) => { const t = String(v ?? '').trim().replace(/[^\d.,-]/g, ''); if (t.includes(',')) return parseFloat(t.replace(/\./g, '').replace(',', '.')) || 0; if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) return parseFloat(t.replace(/\./g, '')) || 0; return parseFloat(t) || 0 }
+const emCampo = (v) => (+v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2, useGrouping: false })
 const pillForma = (f) => `<span class="pill fm-${f}">${(FORMAS[f] || FORMAS.outros)[0]}</span>`
 // ── Finalidade de cada saída: gasto do dia, conta fixa, fatura, transferência… (a escolha vira regra para o mesmo destinatário)
 // A mesma normalização existe no banco (public.nc_norm), que aplica as regras na sincronização do Pluggy.
@@ -975,7 +978,7 @@ function bindGasto() {
   document.getElementById('gConta').addEventListener('change', (e) => { const x = CARTOES().find((k) => k.id === e.target.value); if (x) { const r = f.querySelector(`input[name=gQuem][value=${x.quem}]`); if (r) r.checked = true } })
   f.addEventListener('submit', async (e) => {
     e.preventDefault()
-    const valor = parseFloat(document.getElementById('gValor').value.replace(/\./g, '').replace(',', '.'))
+    const valor = numBR(document.getElementById('gValor').value)
     if (!(valor > 0)) return toast('Informe um valor maior que zero.')
     const g = { data: document.getElementById('gData').value || iso(hoje()), desc: document.getElementById('gDesc').value.trim(), cat: document.getElementById('gCat').value, quem: document.querySelector('input[name=gQuem]:checked')?.value || 'gabriel', ...pagouCom(document.getElementById('gConta').value), valor, ts: new Date().toISOString(), por: S.meId || null, origem: 'pagina' }
     if (!db) { S.gastos.push({ id: 'local' + Date.now(), ...g }); closeGasto(); toast('Lançado só nesta prévia. Abra logado para salvar.'); return render() }
@@ -1093,7 +1096,7 @@ after.metas = () => {
   document.getElementById('savePct').addEventListener('click', () => { const { v, s } = upd(); if (s !== 100) return; S.cfg.metas.forEach((m, i) => (m.pct = v[i])); saveCfg('Divisão salva.') })
   document.getElementById('fAporte').addEventListener('submit', async (e) => {
     e.preventDefault()
-    const valor = parseFloat(document.getElementById('aValor').value.replace(/\./g, '').replace(',', '.')); if (!(valor > 0)) return toast('Informe o valor.')
+    const valor = numBR(document.getElementById('aValor').value); if (!(valor > 0)) return toast('Informe o valor.')
     const alvo = document.getElementById('aMeta').value, data = document.getElementById('aData').value || iso(hoje())
     const itens = alvo === 'split' ? S.cfg.metas.map((m) => ({ meta: m.id, valor: Math.round(valor * m.pct) / 100 })) : [{ meta: alvo, valor }]
     if (!db) { itens.forEach((x) => S.aportes.push({ id: 'l' + Math.random(), data, ...x })); toast('Registrado só nesta prévia.'); return render() }
@@ -1273,7 +1276,7 @@ function vAjustes(c) {
     <section class="card"><div class="card-h"><h3>Contas fixas</h3><small>${brl(c.fixas, false)}/mês · cartões ficam em Cartões</small></div><div class="card-b">
       <div class="fixas">${S.contas.filter((x) => x.tipo !== 'cartao').map((x) => `<div class="fx" data-fx="${esc(x.id)}">
         <label class="fx-nome"><span class="sr">Nome</span><input id="cn-${x.id}" name="cn-${x.id}" autocomplete="off" value="${esc(x.nome)}" aria-label="Nome da conta"></label>
-        <label class="fx-v"><span>Valor</span><input id="cv-${x.id}" name="cv-${x.id}" autocomplete="off" inputmode="decimal" value="${x.valor}" aria-label="Valor de ${esc(x.nome)}"></label>
+        <label class="fx-v"><span>Valor</span><input id="cv-${x.id}" name="cv-${x.id}" autocomplete="off" inputmode="decimal" value="${emCampo(x.valor)}" aria-label="Valor de ${esc(x.nome)}"></label>
         <label class="fx-d"><span>Dia</span><input id="cd-${x.id}" name="cd-${x.id}" autocomplete="off" inputmode="numeric" value="${x.dia}" aria-label="Dia de vencimento de ${esc(x.nome)}"></label>
         <label class="fx-q"><span>Quem paga</span><select id="cq-${x.id}" name="cq-${x.id}" aria-label="Quem paga ${esc(x.nome)}">${Object.entries(PESSOAS).map(([k, n]) => `<option value="${k}" ${x.quem === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         <button class="fx-del" type="button" data-fxdel="${esc(x.id)}" aria-label="Remover ${esc(x.nome)}"><i data-lucide="trash-2"></i></button>
@@ -1292,7 +1295,7 @@ function vAjustes(c) {
 }
 after.ajustes = (c) => {
   after.assistente(c); waBind(); bindBancos()
-  const num = (id) => parseFloat(String(document.getElementById(id).value).replace(/\./g, '').replace(',', '.')) || 0
+  const num = (id) => numBR(document.getElementById(id).value)
   document.getElementById('fCfg').addEventListener('submit', (e) => { e.preventDefault(); S.cfg.rendas = { gabriel: num('rG'), tainara: num('rT') }; S.cfg.metaMensal = num('mM'); S.cfg.dizimoFixo = num('dzF'); S.cfg.diaSalario = Math.min(28, Math.max(1, Math.round(num('dS')) || 5)); S.cfg.metas.forEach((m, i) => (m.alvo = num('alvo' + i))); saveCfg('Ajustes salvos.') })
   const fixas = () => S.contas.filter((x) => x.tipo !== 'cartao')
   document.getElementById('saveContas').addEventListener('click', async () => {
@@ -1553,7 +1556,7 @@ function vCartoes(c) {
           <label class="fld">Dia da virada<input id="ccFech" name="ccFech" autocomplete="off" inputmode="numeric" value="${fech(x)}"></label>
           <label class="fld">Dia do vencimento<input id="ccDia" name="ccDia" autocomplete="off" inputmode="numeric" value="${x.dia}"></label>
           <label class="fld">Limite<input id="ccLim" name="ccLim" autocomplete="off" inputmode="decimal" placeholder="0,00" value="${lim || ''}"></label>
-          <label class="fld">Fatura prevista<input id="ccPrev" name="ccPrev" autocomplete="off" inputmode="decimal" value="${x.valor}"></label>
+          <label class="fld">Fatura prevista<input id="ccPrev" name="ccPrev" autocomplete="off" inputmode="decimal" value="${emCampo(x.valor)}"></label>
           <div class="fld" style="grid-column:span 2"><button class="btn btn-primary" type="submit" style="justify-content:center">Salvar cartão</button></div>
         </form></div></section></details>
       <details class="card dobra" ${largo() ? 'open' : ''}><summary>Lançar compra parcelada</summary><section><div class="card-h"><h3>Lançar compra</h3></div>
@@ -1577,7 +1580,7 @@ after.cartoes = (c) => {
   if (ui.rolar) { ui.rolar = false; setTimeout(() => document.getElementById('drop')?.scrollIntoView({ block: 'center' }), 50) }
   document.querySelectorAll('[data-card]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); ui.card = a.dataset.card; ui.fat = null; render() }))
   document.querySelectorAll('[data-fat]').forEach((b) => b.addEventListener('click', () => { ui.fat = b.dataset.fat; render() }))
-  const n = (id) => parseFloat(String(document.getElementById(id).value).replace(/\./g, '').replace(',', '.')) || 0
+  const n = (id) => numBR(document.getElementById(id).value)
   document.getElementById('fCard').addEventListener('submit', async (e) => {
     e.preventDefault()
     const upd = { banco: document.getElementById('ccBanco').value, last4: document.getElementById('ccLast4').value.replace(/\D/g, '').slice(-4), fechamento: Math.min(31, Math.max(1, Math.round(n('ccFech')) || fech(x))), dia: Math.min(31, Math.max(1, Math.round(n('ccDia')) || x.dia)), limite: n('ccLim'), valor: n('ccPrev') || x.valor }
@@ -1651,7 +1654,7 @@ function vDizimo(c) {
   </div>`
 }
 after.dizimo = (c) => {
-  const n = (id) => parseFloat(String(document.getElementById(id).value).replace(/\./g, '').replace(',', '.')) || 0
+  const n = (id) => numBR(document.getElementById(id).value)
   document.getElementById('dzGo').addEventListener('click', () => { document.getElementById('cardDz').scrollIntoView({ block: 'center' }); document.getElementById('dzValor').focus() })
   document.getElementById('dzPix')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(S.cfg.pixIgreja); toast('Chave Pix copiada.') } catch { toast('Chave: ' + S.cfg.pixIgreja) } })
   document.getElementById('fDz').addEventListener('submit', async (e) => {
@@ -1712,7 +1715,7 @@ function vAssinaturas(c) {
     </div></section>`
 }
 function bindAssinaturas(c) {
-  const n = (id) => parseFloat(String(document.getElementById(id).value).replace(/\./g, '').replace(',', '.')) || 0
+  const n = (id) => numBR(document.getElementById(id).value)
   const salva = async (cp) => { if (!db) { S.compras.push({ id: 'l' + Date.now(), ...cp }); toast('Adicionada só nesta prévia.'); return render() } try { await db.collection('compras').add(cp); toast('Assinatura adicionada.') } catch { toast('Não salvou. Tente de novo.') } }
   const nova = (desc, valor, cartao, data, cat) => { const x = CARTOES().find((k) => k.id === cartao) || CARTOES()[0]; return { cartao: x.id, desc, valor, data: data || iso(c.t), parcelas: 1, assinatura: true, cat: cat || 'lazer', quem: x.quem, ts: new Date().toISOString(), por: S.meId || null } }
   document.getElementById('fSub')?.addEventListener('submit', (e) => { e.preventDefault(); const v = n('sbValor'); if (!(v > 0)) return toast('Informe o valor por mês.'); salva(nova(document.getElementById('sbNome').value.trim(), v, document.getElementById('sbCartao').value, document.getElementById('sbData').value, document.getElementById('sbCat').value)) })
