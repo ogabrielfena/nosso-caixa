@@ -834,14 +834,18 @@ function cardSaldos() {
   const conta = contas.filter((x) => !x.incluiInvestimentos)
   const total = conta.reduce((a, x) => a + +x.saldo, 0)
   const porQuem = Object.keys(PESSOAS).map((q) => [q, conta.filter((x) => x.quem === q).reduce((a, x) => a + +x.saldo, 0)])
-  const fatura = cartoes.reduce((a, x) => a + +x.saldo, 0)
+  // cartão: "saldo" do Open Finance é o limite USADO (inclui parcelas futuras); a fatura de verdade vem em x.fatura (sync desde 14/10)
+  const hojeI = iso(new Date()), aPagar = (x) => x.fatura && x.fatura.vence >= hojeI
+  const fatura = cartoes.reduce((a, x) => a + (aPagar(x) ? +x.fatura.valor : x.fatura ? 0 : +x.saldo), 0)
+  const dm = (d) => d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : ''
   const tile = (x) => {
     const ida = idadeSaldo(x), cor = COR_BANCO[x.banco] || 'var(--ink-3)'
     if (x.tipo === 'cartao') {
       const usado = x.limite ? Math.min(100, Math.round(((+x.limite - +x.disponivel) / +x.limite) * 100)) : 0
       const fim = (String(x.nome).match(/final (\d+)/) || [])[1]
       return `<div class="sd-c cc"><div class="top">${ph(x.quem)}<b>${esc(x.banco)}</b><i class="bk" style="background:${cor}" aria-hidden="true"></i></div>
-        <div class="q">Cartão${fim ? ` final ${fim}` : ''} · fatura aberta</div><div class="v num">${brl(+x.saldo)}</div>
+        ${aPagar(x) ? `<div class="q">Cartão${fim ? ` final ${fim}` : ''} · fatura vence ${dm(x.fatura.vence)}</div><div class="v num">${brl(+x.fatura.valor)}</div>${x.proxima?.valor ? `<div class="q">Próxima fatura até agora: <b class="num">${brl(+x.proxima.valor)}</b></div>` : ''}`
+          : `<div class="q">Cartão${fim ? ` final ${fim}` : ''} · em aberto</div><div class="v num">${brl(+x.saldo)}</div>${x.fatura ? `<div class="q">Última fatura venceu ${dm(x.fatura.vence)} (${brl(+x.fatura.valor)})</div>` : ''}`}
         ${x.limite ? `<div class="usage" role="img" aria-label="${usado}% do limite usado"><i style="width:${usado}%"></i></div><div class="q">${brl(+x.disponivel, false)} livres de ${brl(+x.limite, false)}</div>` : ''}
         <div class="q ${ida.velho ? 'velho' : ''}">${ida.txt}</div></div>`
     }
@@ -854,7 +858,7 @@ function cardSaldos() {
       <div class="sd-total">
         <div class="lbl">Em conta agora</div>
         <div class="bigval num">${brl(total)}</div>
-        ${fatura ? `<div class="note">Faturas abertas nos cartões: <b class="num" style="color:var(--ink)">${brl(fatura)}</b></div>` : ''}
+        ${fatura ? `<div class="note">Faturas a pagar nos cartões: <b class="num" style="color:var(--ink)">${brl(fatura)}</b></div>` : ''}
         <div class="quem">${porQuem.map(([q, v]) => { const fora = contas.filter((x) => x.quem === q && x.incluiInvestimentos); return `<div>${ph(q)}<span>${PESSOAS[q]}${fora.length ? `<small>${fora.map((x) => x.banco).join(', ')} com investimentos fora do total</small>` : ''}</span><b class="num">${brl(v)}</b></div>` }).join('')}</div>
       </div>
       <div class="sd-grid">${[...contas, ...cartoes].map(tile).join('')}${naoSync.length ? `<div class="aviso"><i data-lucide="info"></i>${naoSync.join(', ')} não envia saldo pelo Open Finance: confira no app do banco.</div>` : ''}</div>
@@ -2014,7 +2018,7 @@ async function ask(q) {
 // ───────────────────────── Dados compartilhados ─────────────────────────
 S.gastos = exemploGastos()
 { const h = (x) => new Date(Date.now() - x * 3600e3).toISOString()
-  S.saldos = [{ id: 'd1', banco: 'Nubank', tipo: 'conta', nome: 'Conta Nubank', saldo: 4021.8, quem: 'gabriel', doBanco: h(5) }, { id: 'd2', banco: 'C6', tipo: 'conta', nome: 'Conta C6', saldo: 3313.24, quem: 'tainara', doBanco: h(30), incluiInvestimentos: true }, { id: 'd3', banco: 'Porto', tipo: 'conta', nome: 'Conta Porto', saldo: 0, quem: 'gabriel', doBanco: h(5) }, { id: 'd4', banco: 'Nubank', tipo: 'cartao', nome: 'Cartão Nubank final 8222', saldo: 5110.57, limite: 13500, disponivel: 8389.43, quem: 'gabriel', doBanco: h(5) }] }
+  S.saldos = [{ id: 'd1', banco: 'Nubank', tipo: 'conta', nome: 'Conta Nubank', saldo: 4021.8, quem: 'gabriel', doBanco: h(5) }, { id: 'd2', banco: 'C6', tipo: 'conta', nome: 'Conta C6', saldo: 3313.24, quem: 'tainara', doBanco: h(30) }, { id: 'd3', banco: 'Porto', tipo: 'conta', nome: 'Conta Porto', saldo: 0, quem: 'gabriel', doBanco: h(5) }, { id: 'd4', banco: 'Nubank', tipo: 'cartao', nome: 'Cartão Nubank final 8222', saldo: 5110.57, limite: 13500, disponivel: 8389.43, quem: 'gabriel', doBanco: h(5), fatura: { valor: 2576.49, vence: iso(new Date(Date.now() + 5 * 864e5)) }, proxima: { valor: 1311.68, mes: '' } }] }
 { const t = hoje(), d = (n) => iso(new Date(t.getFullYear(), t.getMonth(), t.getDate() - n))
   S.compras = [{ id: 'e1', cartao: 'cartao-g', desc: 'Passagem Floripa', valor: 1890, data: d(20), parcelas: 6, cat: 'lazer', quem: 'gabriel' }, { id: 'e2', cartao: 'cartao-g', desc: 'Spotify Família', valor: 34.9, data: d(40), parcelas: 1, assinatura: true, cat: 'lazer', quem: 'gabriel' }, { id: 'e3', cartao: 'cartao-t', desc: 'Geladeira', valor: 4200, data: d(35), parcelas: 10, cat: 'casa', quem: 'tainara' }, { id: 'e4', cartao: 'cartao-t', desc: 'Netflix', valor: 44.9, data: d(15), parcelas: 1, assinatura: true, cat: 'lazer', quem: 'tainara' }] }
 route()
