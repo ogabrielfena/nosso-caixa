@@ -138,7 +138,8 @@ a{color:inherit}
 /* saldo nas contas (Meu Pluggy) */
 .sd{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,2.1fr);gap:20px;align-items:start}
 .sd-total .lbl{font-size:14px;color:var(--ink-3)}
-.sd-total .bigval{margin:6px 0 8px}
+.sd-total .bigval{margin:6px 0 8px;font-size:52px;font-weight:600}
+@media (max-width:720px){.sd-total .bigval{font-size:40px}}
 .sd-total .quem{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 .sd-total .quem div{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
 .sd-total .quem .ph{width:24px;height:24px}
@@ -882,6 +883,8 @@ function vHoje(c) {
   const maxG = Math.max(...gv.map((x) => x[1]), 1), hl = gv.reduce((a, b) => (b[1] > a[1] ? b : a))
   const g = [...S.gastos].sort((a, b) => (b.data + (b.ts || '')).localeCompare(a.data + (a.ts || ''))).slice(0, urg ? 3 : 4)
   return `
+  ${cardSaldos()}
+
   <div class="grid gh">
     <section class="card bal">
       <div class="bal-top">
@@ -911,8 +914,6 @@ function vHoje(c) {
       </div>
     </section>
   </div>
-
-  ${cardSaldos()}
 
   <div class="grid g3">
     <section class="card so-desk">
